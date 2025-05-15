@@ -28,18 +28,22 @@ from pathlib import Path
 # ============================================================================
 # Basic file io
 # ============================================================================
-def find_all_castep_files(root_dir):
+def find_all_files_by_extension(root_dir, extension=".castep"):
     """
-    Recursively finds all .castep files under the given root directory.
+    Recursively finds all files with the given extension under the specified directory.
     
     Parameters:
-        root_dir (str or Path): The directory to search from.
-        
+        root_dir (str or Path): Directory to search from.
+        extension (str): File extension to match, including the dot (e.g. ".castep", ".xyz").
+    
     Returns:
-        List[Path]: List of Path objects pointing to .castep files.
+        List[Path]: List of matching Path objects.
     """
     root = Path(root_dir)
-    return list(root.rglob("*.castep"))
+    if not extension.startswith("."):
+        extension = "." + extension
+    return list(root.rglob(f"*{extension}"))
+
 
 
 # ============================================================================
@@ -253,7 +257,7 @@ def collect_summary_table(data_path):
 
 
 # ============================================================================
-#  Energy and structure information
+#  Energy information
 # ============================================================================
 def extract_LBFGS_energies(castep_path):
     """
@@ -329,6 +333,10 @@ def extract_lattice_parameters(castep_path):
     return None
 
 
+# ============================================================================
+#  Structure information
+# ============================================================================
+
 def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
     ax, ay, az = 'err', 'err', 'err'
     nx, ny, nz = 'err', 'err', 'err'
@@ -364,6 +372,58 @@ def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
                 nx, ny, nz = 'err', 'err', 'err'
 
     return {'ax': ax, 'ay': ay, 'az': az, 'nx': nx, 'ny': ny, 'nz': nz, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
+
+
+
+def extract_final_fractional_positions(castep_path):
+    """
+    Extracts the final fractional positions from the LBFGS: Final Configuration block
+    in a CASTEP .castep file, by looking for the specific border line
+    'x----...----x' after the headers, then reading subsequent 'x ... x' lines.
+    """
+    lines = Path(castep_path).read_text().splitlines()
+    frac_positions = []
+
+    in_lbfgs = False
+    start_parsing = False
+
+    for line in lines:
+        # 1) Enter LBFGS block
+        if not in_lbfgs and "LBFGS: Final Configuration" in line:
+            in_lbfgs = True
+            continue
+
+        if not in_lbfgs:
+            continue
+
+        # 2) Look for the dashed border after column headings:
+        #    must start (after whitespace) with 'x-' and end with '-x'
+        if not start_parsing:
+            if re.match(r'^\s*x-+x\s*$', line):
+                start_parsing = True
+            continue
+
+        # 3) Once parsing, stop on blank or non-x lines
+        if not line.strip() or not line.lstrip().startswith('x'):
+            break
+
+        # 4) Strip off the 'x' borders and whitespace
+        entry = line.strip().strip('x').strip()
+        parts = entry.split()
+        # Expect at least 5 fields: Element, Number, u, v, w
+        if len(parts) < 5:
+            continue
+
+        symbol = parts[0]
+        try:
+            u, v, w = map(float, parts[2:5])
+        except ValueError:
+            continue
+
+        frac_positions.append((symbol, u, v, w))
+
+    return frac_positions
+
 
 # ============================================================================
 #  Plotting functions
