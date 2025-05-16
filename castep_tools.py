@@ -23,6 +23,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+import math
+from ase import Atoms
+import nglview as nv        # pip install nglview
+
 
 
 # ============================================================================
@@ -205,7 +209,7 @@ def collect_summary_table(data_path):
     Returns: pandas DataFrame
     """
     job_path = Path(data_path).resolve()
-    castep_files = find_all_castep_files(job_path)
+    castep_files = find_all_files_by_extension(job_path, extension=".castep")
     
     summary = []
 
@@ -424,9 +428,31 @@ def extract_final_fractional_positions(castep_path):
 
     return frac_positions
 
+def fractional_coords_from_castep(castep_path):
+    # 1. extract fractional positions and lattice
+    fracs = extract_final_fractional_positions(castep_path)   # returns [(symbol,u,v,w),…]
+    lat   = extract_lattice_parameters(castep_path)           # {'a':…, 'b':…, 'c':…, …}
+
+    # 2. clean up symbols and build lists
+    symbols = [s.split(':')[0] for s, u, v, w in fracs]  # drop any “:D” suffix
+    scaled_positions = [(u, v, w) for s, u, v, w in fracs]
+
+    # 3. assemble cell matrix (orthogonal example)
+    a, b, c = lat['ax'], lat['ay'], lat['az']
+    cell = [[a, 0, 0],
+            [0, b, 0],
+            [0, 0, c]]
+
+    # 4. build the Atoms object
+    atoms = Atoms(symbols=symbols,
+                  scaled_positions=scaled_positions,
+                  cell=cell,
+                  pbc=True)
+    
+    return atoms 
 
 # ============================================================================
-#  Plotting functions
+#  Plotting and viewing functions
 # ============================================================================
 
 def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Convergence", figsize=(6, 4)):
@@ -448,3 +474,12 @@ def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Conver
 
     plt.tight_layout()
     plt.show()
+
+def view_structure(atoms):
+    view = nv.show_ase(atoms,scale=0.01, aspectRatio=1.)
+    view.camera = 'orthographic'
+    view.center()
+    view.control.spin([0, 0, 1], math.pi/2)  # Rotate 90° about z-axis
+    view.control.spin([0, 1, 0], math.pi/2)  # Rotate 90° about z-axis
+    view.control.zoom(0.5)
+    display(view)
