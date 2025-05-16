@@ -27,7 +27,8 @@ import math
 from ase import Atoms
 import nglview as nv        # pip install nglview
 
-
+from IPython.display import display, Image as StaticImage
+import time
 
 # ============================================================================
 # Basic file io
@@ -47,7 +48,6 @@ def find_all_files_by_extension(root_dir, extension=".castep"):
     if not extension.startswith("."):
         extension = "." + extension
     return list(root.rglob(f"*{extension}"))
-
 
 
 # ============================================================================
@@ -475,11 +475,50 @@ def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Conver
     plt.tight_layout()
     plt.show()
 
-def view_structure(atoms):
+def view_structure(atoms,show_structure=True):
     view = nv.show_ase(atoms,scale=0.01, aspectRatio=1.)
     view.camera = 'orthographic'
     view.center()
     view.control.spin([0, 0, 1], math.pi/2)  # Rotate 90° about z-axis
     view.control.spin([0, 1, 0], math.pi/2)  # Rotate 90° about z-axis
     view.control.zoom(0.5)
-    display(view)
+    if show_structure:
+        display(view)
+        return
+    else:
+        return view
+
+# ============================================================================
+#  Macro like functions doing multiple things
+# ============================================================================
+def optimisation_summaries(castep_paths):
+    for castep_path in castep_paths:
+        # Header and error information
+        print_file_info(castep_path)
+        #ct.extract_warnings(castep_path,verbose=True)
+
+        # Energy convergence
+        convergence = extract_LBFGS_energies(castep_path)
+        final_enthalpy = extract_LBFGS_final_enthalpy(castep_path)
+        print('Final enthalpy = {} eV.'.format(final_enthalpy))
+        plot_energy_vs_iteration(convergence, title=castep_path.stem+' '+str(final_enthalpy),figsize=(5,2))
+        
+        # Unit cell parameters
+        cell = extract_lattice_parameters(castep_path,a0=3.8668346, vac=15.0)
+        cell_df = pd.DataFrame(cell.items(), columns=["Cell parameters", "Value"])
+        display(cell_df) 
+
+        # General parameters
+        general_params =  extract_summary_parameters(castep_path)
+        general_params_df = pd.DataFrame(general_params.items(), columns=["General parameter", "Value"])
+        display(general_params_df) 
+
+        # Show structure
+        atoms = fractional_coords_from_castep(castep_path)
+        view = view_structure(atoms,show_structure=False)
+        display(view)
+        img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
+        display(img)
+        
+
+
