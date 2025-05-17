@@ -816,3 +816,92 @@ def write_param_file(
         print(full_text)
 
     return outfile
+
+
+# ============================================================================
+#  Generate MYRIAD job submission scripts
+# ============================================================================
+
+def write_job_script(
+    path,
+    filename,
+    wall_time='24:00:00',
+    mem='10G',
+    tmpfs='10G',
+    n_procs=4,
+    display_file=False
+):
+    """
+    Write a job submission script for SGE with the given parameters.
+
+    Args:
+        path (str or Path): Directory where the .job file will be created.
+        filename (str): Base name for the job file (no extension).
+        wall_time (str): Wallclock time in format HH:MM:SS. Default '48:00:00'.
+        mem (str): Memory per process (e.g., '10G'). Default '10G'.
+        tmpfs (str): TMPDIR space per node (e.g., '20G'). Default '20G'.
+        n_procs (int): Number of processors. Default 8.
+        display_file (bool): If True, print the script contents after writing.
+
+    Returns:
+        Path: Path to the written .job file.
+    """
+    # Ensure output directory exists
+    out_dir = Path(path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build file path
+    job_file = out_dir / f"{filename}.job"
+
+    # Script content
+    content = f"""#!/bin/bash
+
+# Request shell
+#$ -S /bin/bash
+
+# Request wallclock time (format hours:minutes:seconds).
+#$ -l h_rt={wall_time}
+
+# Request X gigabyte of RAM per process.
+#$ -l mem={mem}
+
+# Request TMPDIR space per node
+#$ -l tmpfs={tmpfs}
+
+# Set the working directory to be the directory the job is submitted from
+#$ -cwd
+
+# Set the name of the job.
+#$ -N {filename}
+
+# Merge .e and .o files (error and output)
+#$ -j y
+
+# Number of processors
+#$ -pe mpi {n_procs}
+
+# Setup the CASTEP calculation.
+module load --redirect default-modules
+module unload -f compilers mpi
+module load mpi/intel/2019/update4/intel
+module load compilers/intel/2019/update4
+module load castep/19.1.1/intel-2019
+
+# Run the CASTEP calculation
+
+echo -n "Starting CASTEP calculation: "
+date
+gerun castep.mpi {filename}
+echo -n "Finished: "
+date
+"""
+
+    # Write to disk
+    with open(job_file, 'w') as f:
+        f.write(content)
+
+    # Optionally display to console
+    if display_file:
+        print(content)
+
+    return job_file
