@@ -524,11 +524,11 @@ def optimisation_summaries(castep_paths):
 #  Generate CASTEP cell files
 # ============================================================================
 
-def write_block_lattice_cart(a=3.8668346,nx=1,ny=1,nz=1):
+def write_block_lattice_cart(a=3.8668346,b=3.8668346,c=5.4685299,nx=1,ny=1,nz=1):
     """
     Write a block lattice in Cartesian coordinates.
     """
-    lattice = np.diag([nx, ny, nz * math.sqrt(2)])*a
+    lattice = np.diag([nx * a, ny * b, nz * c])
 
     lines = ["%BLOCK lattice_cart", "   ANG"]
     for row in lattice:
@@ -619,9 +619,13 @@ def write_fractional_bulk_coords(
     return "\n".join(lines)
 
 
-def write_cell_file(atom, nx, ny, nz, filename='bulk_cell.cell', path=".", 
+def write_cell_file(atom, nx, ny, nz, 
                     a=3.8668346,
+                    b=3.8668346,
+                    c=5.4685299,
                     unit_cell=None,
+                    filename='bulk_cell.cell', 
+                    path=".", 
                     display_file=False):
     """
     Generate lattice, constraints and fractional positions for an
@@ -641,7 +645,7 @@ def write_cell_file(atom, nx, ny, nz, filename='bulk_cell.cell', path=".",
         Lattice constant to pass to write_block_lattice_cart.
     """
     # 1) Build the three text‐blocks
-    lattice_block = write_block_lattice_cart(a=a, nx=nx, ny=ny, nz=nz)
+    lattice_block = write_block_lattice_cart(a=a, b=b, c=c, nx=nx, ny=ny, nz=nz)
     constraint_block = write_cell_constraints()
     frac_block = write_fractional_bulk_coords(nx=nx, ny=ny, nz=nz, atom=atom,unit_cell=unit_cell)
     
@@ -662,5 +666,6 @@ def write_cell_file(atom, nx, ny, nz, filename='bulk_cell.cell', path=".",
     if display_file:
         with open(outfile, "r") as f:
             print(f.read())
+
     return outfile
 
