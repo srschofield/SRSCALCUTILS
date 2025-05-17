@@ -542,15 +542,44 @@ def write_block_lattice_cart(a=3.8668346,b=3.8668346,c=5.4685299,nx=1,ny=1,nz=1)
     block_text = "\n".join(lines)
     return(block_text)
 
-def write_cell_constraints():
+def write_cell_constraints(constraints=None):
     """
     Write a block of cell constraints.
-    """
-    lines = ["%BLOCK cell_constraints", "      0   0   0", "      0   0   0", "%ENDBLOCK cell_constraints"]
-    block_text = "\n".join(lines)
-    return(block_text)
 
-import numpy as np
+    %BLOCK CELL_CONSTRAINTS
+        Ia Ib Ic
+        Ialpha Ibeta Igamma
+    %ENDBLOCK CELL_CONSTRAINTS
+
+    - Entries 1–3 fix or couple the magnitudes a, b, c.
+    - Entries 4–6 fix or couple the angles α, β, γ.
+    - Zero means “fixed.”  Identical positive integers mean “tied together.”
+    - A magnitude index (1–3) cannot appear also in the angle indices (4–6).
+    """
+    # 1) Default if none provided
+    if constraints is None:
+        constraints = [
+            [0, 0, 0],
+            [0, 0, 0],
+        ]
+
+    # 2) Normalize & validate
+    constraints = np.asarray(constraints, dtype=int)
+    if constraints.shape != (2, 3):
+        raise ValueError(
+            f"constraints must be shape (2,3), got {constraints.shape}"
+        )
+
+    # 3) Build the lines
+    lines = ["%BLOCK CELL_CONSTRAINTS"]
+    for row in constraints:
+        # each integer in a 4-char field, space-separated
+        fields = [f"{int(val):4d}" for val in row]
+        lines.append("    " + " ".join(fields))
+    lines.append("%ENDBLOCK CELL_CONSTRAINTS")
+
+    return "\n".join(lines)
+
 
 def write_fractional_bulk_coords(
     nx=1,
@@ -618,12 +647,29 @@ def write_fractional_bulk_coords(
 
     return "\n".join(lines)
 
+def write_kpoints_mp_grid(kpoints_mp_grid):
+    # only proceed if the user actually passed something
+    if kpoints_mp_grid is not None:
+        # ensure it’s an array (or list-like)
+        arr = np.asarray(kpoints_mp_grid, dtype=int)
+
+        # Option A: simple Python join
+        parts = " ".join(str(x) for x in arr.tolist())
+        return f"KPOINTS_MP_GRID : {parts}"
+    else:
+        return ""
 
 def write_cell_file(atom, nx, ny, nz, 
                     a=3.8668346,
                     b=3.8668346,
                     c=5.4685299,
                     unit_cell=None,
+                    constraints=None,
+                    fix_all_ions=True,
+                    symmetry_generate=True,
+                    symmetry_tol=None,
+                    kpoints_mp_grid=None,
+                    title=None,
                     filename='bulk_cell.cell', 
                     path=".", 
                     display_file=False):
@@ -646,12 +692,40 @@ def write_cell_file(atom, nx, ny, nz,
     """
     # 1) Build the three text‐blocks
     lattice_block = write_block_lattice_cart(a=a, b=b, c=c, nx=nx, ny=ny, nz=nz)
-    constraint_block = write_cell_constraints()
+    constraint_block = write_cell_constraints(constraints=constraints)
     frac_block = write_fractional_bulk_coords(nx=nx, ny=ny, nz=nz, atom=atom,unit_cell=unit_cell)
+    kpoints_mp_grid_block = write_kpoints_mp_grid(kpoints_mp_grid)
     
+    if symmetry_generate:
+        symmetry_block = "SYMMETRY_GENERATE"
+        if symmetry_tol:
+            symmetry_block += "\nSYMMETRY_TOL : "+str(symmetry_tol)
+    else: 
+        symmetry_block = ""
+
+    if fix_all_ions:
+        fix_all_ions_block = "FIX_ALL_IONS : TRUE"
+    else: 
+        fix_all_ions_block = ""
+    
+    if title:
+        title_block = f"!TITLE: {title}"
+    else:
+        title_block = ""
+
     # 2) Concatenate with blank lines between
-    full_text = "\n\n".join([lattice_block, constraint_block, frac_block])
+    full_text = "\n\n".join([
+        title_block,
+        lattice_block, 
+        constraint_block, 
+        frac_block,
+        symmetry_block,
+        fix_all_ions_block,
+        kpoints_mp_grid_block
+        ])
     
+    
+
     # 3) Ensure output directory exists
     outdir = Path(path)
     outdir.mkdir(parents=True, exist_ok=True)
