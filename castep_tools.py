@@ -670,7 +670,7 @@ def write_cell_file(atom, nx, ny, nz,
                     symmetry_tol=None,
                     kpoints_mp_grid=None,
                     title=None,
-                    filename='bulk_cell.cell', 
+                    filename='crystal', 
                     path=".", 
                     display_file=False):
     """
@@ -721,14 +721,14 @@ def write_cell_file(atom, nx, ny, nz,
         frac_block,
         symmetry_block,
         fix_all_ions_block,
-        kpoints_mp_grid_block
+        kpoints_mp_grid_block,
+        "",
         ])
     
-    
-
     # 3) Ensure output directory exists
     outdir = Path(path)
     outdir.mkdir(parents=True, exist_ok=True)
+    filename = filename + ".cell"
     outfile = outdir / filename
     
     # 4) Write to disk
@@ -743,3 +743,76 @@ def write_cell_file(atom, nx, ny, nz,
 
     return outfile
 
+# ============================================================================
+#  Generate CASTEP param files
+# ============================================================================
+
+def write_param_file(
+        params,
+        title=None,
+        filename='crystal',
+        path=".",
+        display_file=False
+    ):
+    """
+    Write a CASTEP .param file.
+
+    Parameters
+    ----------
+    params : dict
+        Mapping of keyword → value, e.g.
+          {
+            "TASK": "GeometryOptimization",
+            "XC_FUNCTIONAL": "PBE",
+            "CUT_OFF_ENERGY": 750,
+            "SPIN_POLARISED": True,
+            ...
+          }
+    title : str, optional
+        If given, will be written as a commented title line:
+        !TITLE: {title}
+    filename : str
+        Name of the output .param file.
+    path : str or Path
+        Directory in which to write.
+    display_file : bool
+        If True, print the contents after writing.
+    """
+    # 1) Prepare title line (commented)
+    lines = []
+    if title:
+        lines.append(f"!TITLE: {title}")
+        lines.append("")  # blank line after title
+
+    # 2) Compute key column width for alignment
+    #    uppercase the keys for consistency with CASTEP docs
+    keys = [str(k).upper() for k in params]
+    width = max(len(k) for k in keys)
+
+    # 3) Format each param line
+    for k in keys:
+        v = params[k.lower()] if k.lower() in params else params[k]
+        lines.append(f"{k:<{width}} : {v}")
+
+    lines.append("\n")
+
+    # 4) Join into full text
+    full_text = "\n".join(lines)
+
+    # 5) Ensure output directory exists
+    outdir = Path(path)
+    outdir.mkdir(parents=True, exist_ok=True)
+    filename = filename + ".param"
+    outfile = outdir / filename
+
+    # 6) Write to disk
+    with open(outfile, "w") as f:
+        f.write(full_text)
+
+    print(f"Wrote param file to: {outfile}")
+
+    # 7) Optionally display
+    if display_file:
+        print(full_text)
+
+    return outfile
