@@ -520,5 +520,147 @@ def optimisation_summaries(castep_paths):
         img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
         display(img)
         
+# ============================================================================
+#  Generate CASTEP cell files
+# ============================================================================
 
+def write_block_lattice_cart(a=3.8668346,nx=1,ny=1,nz=1):
+    """
+    Write a block lattice in Cartesian coordinates.
+    """
+    lattice = np.diag([nx, ny, nz * math.sqrt(2)])*a
+
+    lines = ["%BLOCK lattice_cart", "   ANG"]
+    for row in lattice:
+        # format each number to 14 decimal places, aligned in 16-char fields
+        fields = [f"{val:16.10f}" for val in row]
+        # prefix with exactly 4 spaces before the first field
+        lines.append("   " + "".join(fields))
+
+    lines.append("%ENDBLOCK lattice_cart")
+
+    block_text = "\n".join(lines)
+    return(block_text)
+
+def write_cell_constraints():
+    """
+    Write a block of cell constraints.
+    """
+    lines = ["%BLOCK cell_constraints", "      0   0   0", "      0   0   0", "%ENDBLOCK cell_constraints"]
+    block_text = "\n".join(lines)
+    return(block_text)
+
+import numpy as np
+
+def write_fractional_bulk_coords(
+    nx=1,
+    ny=1,
+    nz=1,
+    atom="Si",
+    unit_cell=None
+):
+    """
+    Generate a fractional-coordinate supercell block.
+
+    Parameters
+    ----------
+    nx, ny, nz : int
+        Number of repetitions along x, y, z.
+    atom : str
+        Element label to prepend to each line.
+    unit_cell : array-like of shape (M,3), optional
+        Fractional positions of the M atoms in the unit cell.
+        If None, uses the default 4-atom Si (001) basis.
+
+    Returns
+    -------
+    str
+        A text block in the form:
+        %BLOCK positions_frac
+           Atom   x1      y1      z1
+           ...
+        %ENDBLOCK positions_frac
+    """
+    # default 4‐atom Si cell if none provided
+    if unit_cell is None:
+        unit_cell = np.array([
+            [0.0,  0.0,  0.0],
+            [0.5,  0.0,  0.25],
+            [0.5,  0.5,  0.5],
+            [0.0,  0.5,  0.75],
+        ])
+    else:
+        # ensure it’s a NumPy array
+        unit_cell = np.asarray(unit_cell, dtype=float)
+        if unit_cell.ndim != 2 or unit_cell.shape[1] != 3:
+            raise ValueError("unit_cell must be an array-like of shape (M, 3)")
+
+    super_cell = []
+    # tile the basis over each (i,j,k) cell
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                for pos in unit_cell:
+                    # shift then normalize into supercell fractional coords
+                    new_pos = [
+                        (pos[0] + i) / nx,
+                        (pos[1] + j) / ny,
+                        (pos[2] + k) / nz
+                    ]
+                    super_cell.append(new_pos)
+
+    # build the text block
+    lines = ["%BLOCK positions_frac"]
+    for row in super_cell:
+        fields = [f"{val:16.10f}" for val in row]
+        lines.append("   " + atom + "   " + "".join(fields))
+    lines.append("%ENDBLOCK positions_frac")
+
+    return "\n".join(lines)
+
+
+def write_cell_file(atom, nx, ny, nz, filename='bulk_cell.cell', path=".", 
+                    a=3.8668346,
+                    unit_cell=None,
+                    display_file=False):
+    """
+    Generate lattice, constraints and fractional positions for an
+    nx ny nz supercell of `atom`, and write them all to a single file.
+    
+    Parameters
+    ----------
+    nx, ny, nz : int
+        Number of repetitions along x, y, z.
+    atom : str
+        Element symbol (e.g. "Si").
+    filename : str
+        Name of the output file (e.g. "cell.in").
+    path : str or Path, optional
+        Directory to write into (default: current directory).
+    a : float, optional
+        Lattice constant to pass to write_block_lattice_cart.
+    """
+    # 1) Build the three text‐blocks
+    lattice_block = write_block_lattice_cart(a=a, nx=nx, ny=ny, nz=nz)
+    constraint_block = write_cell_constraints()
+    frac_block = write_fractional_bulk_coords(nx=nx, ny=ny, nz=nz, atom=atom,unit_cell=unit_cell)
+    
+    # 2) Concatenate with blank lines between
+    full_text = "\n\n".join([lattice_block, constraint_block, frac_block])
+    
+    # 3) Ensure output directory exists
+    outdir = Path(path)
+    outdir.mkdir(parents=True, exist_ok=True)
+    outfile = outdir / filename
+    
+    # 4) Write to disk
+    with open(outfile, "w") as f:
+        f.write(full_text)
+    
+    print(f"Wrote cell file to: {outfile}")
+
+    if display_file:
+        with open(outfile, "r") as f:
+            print(f.read())
+    return outfile
 
