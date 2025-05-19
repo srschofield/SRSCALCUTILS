@@ -447,6 +447,89 @@ def get_lattice_parameters(castep_path):
 
     return results
 
+import re
+
+def get_final_lattice_parameters(castep_path):
+    """
+    Parse a CASTEP output file and extract the *final* optimized cell,
+    i.e. the first 'Unit Cell' block occurring after the
+    'LBFGS: Final Configuration:' marker.
+    
+    Returns:
+        dict with keys:
+          - 'real_lattice': 3×3 list of floats
+          - 'a', 'b', 'c': floats
+          - 'alpha', 'beta', 'gamma': floats
+    Raises:
+        RuntimeError if no final configuration or no Unit Cell block is found.
+    """
+    def is_float(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
+    with open(castep_path, 'r') as f:
+        lines = f.readlines()
+
+    # 1) Find the line index of the final‐configuration marker
+    try:
+        start = next(i for i, L in enumerate(lines)
+                     if 'LBFGS: Final Configuration:' in L)
+    except StopIteration:
+        raise RuntimeError("No 'LBFGS: Final Configuration:' found in file")
+
+    # 2) From there, find the next 'Unit Cell' header
+    i = start + 1
+    while i < len(lines) and 'Unit Cell' not in lines[i]:
+        i += 1
+    if i >= len(lines):
+        raise RuntimeError("No Unit Cell block after final configuration")
+
+    # 3) Skip forward to the numeric lattice rows
+    j = i + 1
+    while j < len(lines):
+        parts = lines[j].split()
+        if len(parts) >= 3 and all(is_float(p) for p in parts[:3]):
+            break
+        j += 1
+    if j + 2 >= len(lines):
+        raise RuntimeError("Incomplete lattice matrix after Unit Cell")
+
+    # 4) Read the 3×3 real‐lattice matrix
+    real = []
+    for k in range(j, j + 3):
+        p = lines[k].split()
+        real.append([float(p[0]), float(p[1]), float(p[2])])
+
+    # 5) Find a, b, c and α, β, γ in the following ~20 lines
+    a = b = c = alpha = beta = gamma = None
+    for k in range(j + 3, min(j + 20, len(lines))):
+        if re.match(r'\s*a\s*=', lines[k]):
+            # Expect three lines: a, b, c
+            for offset, (param, angle) in enumerate(
+                [('a','alpha'), ('b','beta'), ('c','gamma')]
+            ):
+                line = lines[k + offset]
+                _, right = line.split('=', 1)
+                vals = right.replace('=',' ').split()
+                length = float(vals[0])
+                angle_val = float(vals[-1])
+                if param == 'a':
+                    a, alpha = length, angle_val
+                elif param == 'b':
+                    b, beta = length, angle_val
+                else:
+                    c, gamma = length, angle_val
+            break
+
+    if None in (a, b, c, alpha, beta, gamma):
+        raise RuntimeError("Failed to parse lattice parameters a/b/c/α/β/γ")
+
+    unit_cell = real
+    return unit_cell, a, b, c, alpha, beta, gamma
+
 
 def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
     ax, ay, az = 'err', 'err', 'err'
@@ -486,7 +569,7 @@ def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
 
 
 
-def extract_final_fractional_positions(castep_path):
+def get_final_fractional_positions(castep_path):
     """
     Extracts the final fractional positions from the LBFGS: Final Configuration block
     in a CASTEP .castep file, by looking for the specific border line
