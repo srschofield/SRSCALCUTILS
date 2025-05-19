@@ -54,17 +54,18 @@ def find_all_files_by_extension(root_dir, extension=".castep"):
 #  General information
 # ============================================================================
 
-def print_file_info(castep_path):
+def print_filename(castep_path):
     """
     Prints a clear heading with filename and full path.
     """
     path = Path(castep_path)
     filename = path.name
     parent_path = path.parent
+    full_path = parent_path / filename
 
     # Build a consistent-width header
     header_text = f" FILE: {filename} "
-    path_text   = f" PATH: {parent_path} "
+    path_text   = f" PATH: {full_path} "
     width = max(len(header_text), len(path_text)) + 4
 
     print("\n" + "=" * width)
@@ -72,22 +73,28 @@ def print_file_info(castep_path):
     print(path_text.center(width))
     print("=" * width + "\n")
 
-def extract_warnings(castep_path, verbose=True):
+
+def get_warnings(castep_path, verbose=True):
     """
-    Extracts and prints WARNING blocks from a .castep file.
+    Extracts WARNING blocks from a .castep file and returns them as text.
     
     Parameters:
         castep_path (str or Path): Path to the .castep file.
-        verbose (bool): If True, print full blocks until the next blank line.
-                        If False, only print the matching WARNING line.
+        verbose (bool): If True, include full blocks until the next blank line.
+                        If False, include only the matching WARNING line.
+    
+    Returns:
+        str: The formatted warning output (or a 'no warnings' message).
     """
     path = Path(castep_path)
     filename = path.name
     parent_path = path.parent
+    full_path = parent_path / filename
 
     with open(castep_path, 'r') as f:
         lines = f.readlines()
 
+    output_lines = []
     in_warning = False
     current_warning = []
     any_warning_found = False
@@ -95,39 +102,45 @@ def extract_warnings(castep_path, verbose=True):
     for i, line in enumerate(lines):
         if "warning" in line.lower():
             if not any_warning_found:
-                print(f"\n===== WARNINGS in: {filename} =====")
-                print(f"      full path: {parent_path}\n")
+                output_lines.append(f"\n===== WARNINGS in: {filename} =====")
+                output_lines.append(f"      full path: {full_path}\n")
                 any_warning_found = True
 
             if not verbose:
-                print(f"Line {i+1}: {line.strip()}")
+                output_lines.append(f"Line {i+1}: {line.strip()}")
                 continue
 
-            # Verbose mode: collect block
+            # Verbose mode: start a new block
             if current_warning:
-                print("".join(current_warning).rstrip())
-                print("-" * 40)
+                # flush previous block
+                output_lines.append("".join(current_warning).rstrip())
+                output_lines.append("-" * 40)
             in_warning = True
             current_warning = [line]
+
         elif in_warning:
-            if line.strip() == '':
-                print("".join(current_warning).rstrip())
-                print("-" * 40)
+            if line.strip() == "":
+                # end of block
+                output_lines.append("".join(current_warning).rstrip())
+                output_lines.append("-" * 40)
                 in_warning = False
                 current_warning = []
             else:
                 current_warning.append(line)
 
+    # flush if file ended while still in a warning block
     if in_warning and current_warning and verbose:
-        print("".join(current_warning).rstrip())
-        print("-" * 40)
+        output_lines.append("".join(current_warning).rstrip())
+        output_lines.append("-" * 40)
 
     if not any_warning_found:
-        print(f"No warnings found in: {filename}")
-        print(f"  full path: {parent_path}")
+        output_lines.append(f"No warnings found in: {filename}")
+        output_lines.append(f"  full path: {full_path}")
+
+    return "\n".join(output_lines)
 
 
-def extract_summary_parameters(castep_path):
+def get_calculation_parameters(castep_path):
     """
     Extracts key calculation parameters from a CASTEP .castep file.
     Returns a dictionary of parameters and values (as floats, ints, or strings),
@@ -263,7 +276,7 @@ def collect_summary_table(data_path):
 # ============================================================================
 #  Energy information
 # ============================================================================
-def extract_LBFGS_energies(castep_path):
+def get_LBFGS_energies(castep_path):
     """
     Extracts iteration numbers and enthalpy values from LBFGS optimization steps.
     Returns a list of tuples: (iteration_number, enthalpy_in_eV)
@@ -287,9 +300,7 @@ def extract_LBFGS_energies(castep_path):
 
     return results
 
-import re
-
-def extract_LBFGS_final_enthalpy(castep_path):
+def get_LBFGS_final_enthalpy(castep_path):
     """
     Extracts the final enthalpy value from a line like:
     'LBFGS: Final Enthalpy     = -8.36355887E+003 eV'
@@ -316,30 +327,126 @@ def extract_LBFGS_final_enthalpy(castep_path):
         return float('nan')  # or return None
 
 
-def extract_lattice_parameters(castep_path):
-    with open(castep_path, 'r') as f:
-        lines = f.readlines()
 
-    for i in range(len(lines) - 1, 0, -1):
-        if "Lattice parameters" in lines[i]:
-            # Should be followed by 3 lines like: a = 5.43  alpha = 90.0
-            a_line = lines[i+1].strip().split()
-            b_line = lines[i+2].strip().split()
-            c_line = lines[i+3].strip().split()
-
-            a = float(a_line[2])
-            alpha = float(a_line[5])
-            b = float(b_line[2])
-            beta = float(b_line[5])
-            c = float(c_line[2])
-            gamma = float(c_line[5])
-            return {'a': a, 'b': b, 'c': c, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
-    return None
 
 
 # ============================================================================
 #  Structure information
 # ============================================================================
+
+# def get_lattice_parameters(castep_path):
+#     with open(castep_path, 'r') as f:
+#         lines = f.readlines()
+
+#     for i in range(len(lines) - 1, 0, -1):
+#         if "Lattice parameters" in lines[i]:
+#             # Should be followed by 3 lines like: a = 5.43  alpha = 90.0
+#             a_line = lines[i+1].strip().split()
+#             b_line = lines[i+2].strip().split()
+#             c_line = lines[i+3].strip().split()
+
+#             a = float(a_line[2])
+#             alpha = float(a_line[5])
+#             b = float(b_line[2])
+#             beta = float(b_line[5])
+#             c = float(c_line[2])
+#             gamma = float(c_line[5])
+#             return {'a': a, 'b': b, 'c': c, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
+#     return None
+
+def get_lattice_parameters(castep_path):
+    """
+    Parse a CASTEP output file and extract, for each 'Unit Cell' block:
+      - real_lattice: a 3×3 list of floats
+      - a, b, c: lattice lengths (floats)
+      - alpha, beta, gamma: cell angles in degrees (floats)
+    
+    Returns:
+        List[dict] of the form:
+        [
+            {
+                'real_lattice': [[r11, r12, r13],
+                                 [r21, r22, r23],
+                                 [r31, r32, r33]],
+                'a': ...,
+                'b': ...,
+                'c': ...,
+                'alpha': ...,
+                'beta': ...,
+                'gamma': ...,
+            },
+            ...
+        ]
+    """
+    def is_float(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
+    results = []
+    with open(castep_path, 'r') as f:
+        lines = f.readlines()
+
+    i = 0
+    while i < len(lines):
+        # Look for the "Unit Cell" heading
+        if 'Unit Cell' in lines[i]:
+            # Advance to where the numeric lattice lines start
+            j = i + 1
+            # skip until we hit a line that looks like six floats
+            while j < len(lines):
+                parts = lines[j].split()
+                if len(parts) >= 6 and all(is_float(p) for p in parts[:3]):
+                    break
+                j += 1
+            if j >= len(lines) - 2:
+                break
+
+            # Read the 3×3 real lattice matrix
+            real = []
+            for k in range(j, j + 3):
+                parts = lines[k].split()
+                real.append([float(parts[0]), float(parts[1]), float(parts[2])])
+
+            # Now find the lattice-parameters block (a, b, c and α, β, γ)
+            # It always appears as three lines starting with "a =", "b =", "c ="
+            # somewhere after our matrix, so scan forward a bit
+            a = b = c = alpha = beta = gamma = None
+            for k in range(j + 3, min(j + 20, len(lines))):
+                if re.search(r'^\s*a\s*=', lines[k]):
+                    # Expect three lines: a, b, c
+                    for offset, (param, angle) in enumerate(
+                        [('a','alpha'), ('b','beta'), ('c','gamma')]
+                    ):
+                        line = lines[k + offset]
+                        # split on '=' then on whitespace
+                        left, right = line.split('=', 1)
+                        # right now like "   3.866591          alpha =   60.000000"
+                        vals = right.replace('=',' ').split()
+                        length = float(vals[0])
+                        angle_val = float(vals[-1])
+                        if param == 'a':
+                            a, alpha = length, angle_val
+                        elif param == 'b':
+                            b, beta = length, angle_val
+                        else:
+                            c, gamma = length, angle_val
+                    break
+
+            # Save and advance
+            results.append({
+                'unit_cell': real,
+                'a': a, 'b': b, 'c': c,
+                'alpha': alpha, 'beta': beta, 'gamma': gamma,
+            })
+            i = j + 3
+        else:
+            i += 1
+
+    return results
+
 
 def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
     ax, ay, az = 'err', 'err', 'err'
@@ -487,14 +594,57 @@ def view_structure(atoms,show_structure=True):
         return
     else:
         return view
+    
+def plot_sequence(
+    y,
+    x=None,
+    xlabel='Index',
+    ylabel='Value',
+    title='',
+    figsize=(4,2),
+    marker='o',
+    **plot_kwargs
+):
+    """
+    Plot a 1D sequence.
+    
+    Parameters
+    ----------
+    y : sequence of float
+        The y-values to plot.
+    x : sequence of float, optional
+        The x-values. If None, uses range(len(y)).
+    xlabel : str, optional
+        Label for the x-axis.
+    ylabel : str, optional
+        Label for the y-axis.
+    title : str, optional
+        Plot title.
+    **plot_kwargs
+        Additional keyword args passed to plt.plot (e.g. linestyle='--').
+    """
+    if x is None:
+        x = list(range(len(y)))
+    
+    plt.figure(figsize=figsize)
+    plt.plot(x, y, marker=marker, **plot_kwargs)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if title:
+        plt.title(title)
+    plt.tight_layout()
+    plt.show()
+
+
+
 
 # ============================================================================
 #  Macro like functions doing multiple things
 # ============================================================================
-def optimisation_summaries(castep_paths):
+def optimisation_summary_macro_1(castep_paths):
     for castep_path in castep_paths:
         # Header and error information
-        print_file_info(castep_path)
+        print_filename(castep_path)
         #ct.extract_warnings(castep_path,verbose=True)
 
         # Energy convergence
