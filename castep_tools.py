@@ -757,14 +757,15 @@ def optimisation_summary_macro_1(castep_paths):
 #  Generate CASTEP cell files
 # ============================================================================
 
-def write_block_lattice_cart(a=3.8668346,b=3.8668346,c=5.4685299,nx=1,ny=1,nz=1):
+def write_block_lattice_cart(lattice_cart,na=1,nb=1,nc=1):
     """
     Write a block lattice in Cartesian coordinates.
     """
-    lattice = np.diag([nx * a, ny * b, nz * c])
+    factors = np.array([[na, nb, nc]]).T  # shape (3,1)
+    scaled_lattice_cart  = lattice_cart * factors
 
     lines = ["%BLOCK lattice_cart", "   ANG"]
-    for row in lattice:
+    for row in scaled_lattice_cart:
         # format each number to 14 decimal places, aligned in 16-char fields
         fields = [f"{val:16.10f}" for val in row]
         # prefix with exactly 4 spaces before the first field
@@ -814,24 +815,23 @@ def write_cell_constraints(constraints=None):
     return "\n".join(lines)
 
 
-def write_fractional_bulk_coords(
-    nx=1,
-    ny=1,
-    nz=1,
-    atom="Si",
-    unit_cell=None
+import numpy as np
+
+def write_positions_frac(
+    na=1,
+    nb=1,
+    nc=1,
+    positions_frac=None
 ):
     """
     Generate a fractional-coordinate supercell block.
 
     Parameters
     ----------
-    nx, ny, nz : int
+    na, nb, nc : int
         Number of repetitions along x, y, z.
-    atom : str
-        Element label to prepend to each line.
-    unit_cell : array-like of shape (M,3), optional
-        Fractional positions of the M atoms in the unit cell.
+    positions_frac : array-like of shape (M,4), optional
+        Each row is [atom_label, frac_x, frac_y, frac_z].
         If None, uses the default 4-atom Si (001) basis.
 
     Returns
@@ -843,42 +843,52 @@ def write_fractional_bulk_coords(
            ...
         %ENDBLOCK positions_frac
     """
-    # default 4‐atom Si cell if none provided
-    if unit_cell is None:
-        unit_cell = np.array([
-            [0.0,  0.0,  0.0],
-            [0.5,  0.0,  0.25],
-            [0.5,  0.5,  0.5],
-            [0.0,  0.5,  0.75],
-        ])
-    else:
-        # ensure it’s a NumPy array
-        unit_cell = np.asarray(unit_cell, dtype=float)
-        if unit_cell.ndim != 2 or unit_cell.shape[1] != 3:
-            raise ValueError("unit_cell must be an array-like of shape (M, 3)")
+    # -- set up the default 4-atom Si basis if needed
+    if positions_frac is None:
+        # list of tuples: (atom_label, x, y, z)
+        positions_frac = [
+            ("Si", 0.0,  0.0,  0.0),
+            ("Si", 0.5,  0.0,  0.25),
+            ("Si", 0.5,  0.5,  0.5),
+            ("Si", 0.0,  0.5,  0.75),
+        ]
+    # -- otherwise we expect an array-like of shape (M,4)
+    #    where element [i,0] is a string label, and [i,1:4] are fractional coords
+    positions_frac = np.asarray(positions_frac, dtype=object)
+    if positions_frac.ndim != 2 or positions_frac.shape[1] != 4:
+        raise ValueError("positions_frac must be array-like of shape (M,4) "
+                         "(atom_label, frac_x, frac_y, frac_z)")
+
+    # split into labels and coords
+    labels = positions_frac[:, 0].astype(str)
+    coords = positions_frac[:, 1:].astype(float)
 
     super_cell = []
+    super_labels = []
+
     # tile the basis over each (i,j,k) cell
-    for i in range(nx):
-        for j in range(ny):
-            for k in range(nz):
-                for pos in unit_cell:
-                    # shift then normalize into supercell fractional coords
-                    new_pos = [
-                        (pos[0] + i) / nx,
-                        (pos[1] + j) / ny,
-                        (pos[2] + k) / nz
-                    ]
-                    super_cell.append(new_pos)
+    for i in range(na):
+        for j in range(nb):
+            for k in range(nc):
+                # shift then normalize into supercell fractional coords
+                # and carry along the atom label
+                shifted = (coords + np.array([i, j, k])) / np.array([na, nb, nc])
+                super_cell.append(shifted)
+                super_labels.extend(labels)
+
+    super_cell = np.vstack(super_cell)   # shape (M*na*nb*nc, 3)
 
     # build the text block
     lines = ["%BLOCK positions_frac"]
-    for row in super_cell:
-        fields = [f"{val:16.10f}" for val in row]
-        lines.append("   " + atom + "   " + "".join(fields))
+    for atom_label, (x, y, z) in zip(super_labels, super_cell):
+        lines.append(
+            f"   {atom_label:2s}   {x:16.10f}{y:16.10f}{z:16.10f}"
+        )
     lines.append("%ENDBLOCK positions_frac")
 
     return "\n".join(lines)
+
+
 
 def write_kpoints_mp_grid(kpoints_mp_grid):
     # only proceed if the user actually passed something
@@ -892,20 +902,22 @@ def write_kpoints_mp_grid(kpoints_mp_grid):
     else:
         return ""
 
-def write_cell_file(atom, nx, ny, nz, 
-                    a=3.8668346,
-                    b=3.8668346,
-                    c=5.4685299,
-                    unit_cell=None,
-                    constraints=None,
-                    fix_all_ions=True,
-                    symmetry_generate=True,
-                    symmetry_tol=None,
-                    kpoints_mp_grid=None,
-                    title=None,
-                    filename='crystal', 
-                    path=".", 
-                    display_file=False):
+def write_cell_file(
+        title = None,
+        path=".",
+        filename="castep_input",
+        na=1,
+        nb=1,
+        nc=1,
+        lattice_cart=None,
+        positions_frac=None,
+        constraints=None,
+        fix_all_ions=True,
+        symmetry_generate=None,
+        symmetry_tol = None,
+        kpoints_mp_grid=None,
+        display_file=True
+    ):
     """
     Generate lattice, constraints and fractional positions for an
     nx ny nz supercell of `atom`, and write them all to a single file.
@@ -923,10 +935,17 @@ def write_cell_file(atom, nx, ny, nz,
     a : float, optional
         Lattice constant to pass to write_block_lattice_cart.
     """
-    # 1) Build the three text‐blocks
-    lattice_block = write_block_lattice_cart(a=a, b=b, c=c, nx=nx, ny=ny, nz=nz)
+    # 
+    if lattice_cart is None:
+        lattice_cart = np.array([
+            [2.7,     2.7,     0.0],
+            [2.7,     0.0,     2.7],
+            [0.0,     2.7,     2.7,]
+        ])
+    lattice_block = write_block_lattice_cart(lattice_cart, na=na, nb=nb, nc=nc)
+
     constraint_block = write_cell_constraints(constraints=constraints)
-    frac_block = write_fractional_bulk_coords(nx=nx, ny=ny, nz=nz, atom=atom,unit_cell=unit_cell)
+    positions_frac_block = write_positions_frac(na=na, nb=nb, nc=nc, positions_frac=positions_frac)
     kpoints_mp_grid_block = write_kpoints_mp_grid(kpoints_mp_grid)
     
     if symmetry_generate:
@@ -940,18 +959,18 @@ def write_cell_file(atom, nx, ny, nz,
         fix_all_ions_block = "FIX_ALL_IONS : TRUE"
     else: 
         fix_all_ions_block = ""
-    
-    if title:
-        title_block = f"!TITLE: {title}"
-    else:
-        title_block = ""
+
+    if title is not None:
+        title_block = f"! {title}"
+    else: 
+        title_block = "! CASTEP cell file generated by SRSCALCUTILS"
 
     # 2) Concatenate with blank lines between
     full_text = "\n\n".join([
         title_block,
         lattice_block, 
         constraint_block, 
-        frac_block,
+        positions_frac_block,
         symmetry_block,
         fix_all_ions_block,
         kpoints_mp_grid_block,

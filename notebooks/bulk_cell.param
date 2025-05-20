@@ -1,7 +1,0 @@
-TASK                 : geomopt
-XC_FUNCTIONAL        : PBE
-CUT_OFF_ENERGY       : 750
-SPIN_POLARISED       : true
-WRITE_CELL_STRUCTURE : true
-CHARGE               : 0
-MAX_SCF_CYCLES       : 300
