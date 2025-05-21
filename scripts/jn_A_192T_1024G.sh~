@@ -1,0 +1,61 @@
+#!/bin/bash
+#$ -N jn                         # Job name
+#$ -q A_192T_1024G.q             # 192-core, 1024 GB queue
+#$ -l h_rt=72:00:00              # Wall-clock time limit
+#$ -pe ompi-local 192            # Request all 192 CPU slots
+#$ -l vf=5500M                   # ≈5.3 GB per core on the 1 TB node
+#$ -V                            # Export environment variables
+#$ -cwd                          # Run in current working directory
+#$ -j y                          # Join stdout and stderr
+#$ -o jn_output.log              # Combined log file
+#$ -S /bin/bash                  # Use bash shell
+
+# (No GPU request on this pure-CPU node)
+
+# Load your modules / CUDA (if needed for other code)
+#module load apps/nvhpc/24.9/cu11.8/nvhpc
+#module load libs/cudnn/9.5.1.17/cuda-11
+
+echo "Modules list 1"
+module list
+
+# Path to personal modules
+module use /hpc/srs/local/privatemodules/
+
+module purge
+module load CASTEP-24
+module load modules sge
+
+# Setup the CASTEP calculation.
+#module load --redirect default-modules
+#module unload -f compilers mpi
+#module load mpi/intel/2019/update4/intel
+#module load compilers/intel/2019/update4
+#module load castep/19.1.1/intel-2019
+
+echo "Modules list 2"
+module list
+
+# Activate conda environment
+source /hpc/srs/local/miniconda3/etc/profile.d/conda.sh
+conda activate apollo_castep
+
+# Diagnostics
+echo "Allocated slots: $NSLOTS"
+echo "Memory per slot: $(echo "$VF/1M" | bc) GB"
+echo "Host: $(hostname)"
+echo "Python executable: $(which python)"
+echo "Working directory: $(pwd)"
+
+# Optional background grep for your notebook URL
+(
+  sleep 60
+  grep http jn_output.log > jn_server.log
+) &
+
+# Launch Jupyter Notebook
+jupyter notebook \
+  --no-browser \
+  --port=8888 \
+  --ip=0.0.0.0 \
+  --NotebookApp.allow_origin='*'

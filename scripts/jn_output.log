@@ -1,0 +1,783 @@
+-catch_rsh /opt/sge/default/spool/p021/active_jobs/44690.1/pe_hostfile
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+p021
+Wed 21 May 09:20:26 BST 2025
+
+What does it take for Americans to do great things; to go to the moon, to
+win wars, to dig canals linking oceans, to build railroads across a continent?
+In independent thought about this question, Neil Armstrong and I concluded
+that it takes a coincidence of four conditions, or in Neil's view, the
+simultaneous peaking of four of the many cycles of American life.  First, a
+base of technology must exist from which to do the thing to be done.  Second,
+a period of national uneasiness about America's place in the scheme of human
+activities must exist.  Third, some catalytic event must occur that focuses
+the national attention upon the direction to proceed.  Finally, an articulate
+and wise leader must sense these first three conditions and put forth with
+words and action the great thing to be accomplished.  The motivation of young
+Americans to do what needs to be done flows from such a coincidence of
+conditions. ...  The Thomas Jeffersons, The Teddy Roosevelts, The John
+Kennedys appear.  We must begin to create the tools of leadership which they,
+and their young frontiersmen, will require to lead us onward and upward.
+		-- Dr. Harrison H. Schmidt
+
+Modules list 1
+Currently Loaded Modulefiles:
+ 1) modules   2) sge/2024.1.0  
+Loading CASTEP-24
+  Loading requirement: compilers/intel/2020_u4
+Modules list 2
+Currently Loaded Modulefiles:
+ 1) compilers/intel/2020_u4   2) CASTEP-24   3) modules   4) sge/2024.1.0  
+Allocated slots: 192
+(standard_in) 1: syntax error
+Memory per slot:  GB
+Host: p021
+Python executable: /hpc/srs/local/miniconda3/envs/apollo_castep/bin/python
+Working directory: /hpc/srs/Python/modules/SRSCALCUTILS/scripts
+[I 2025-05-21 09:20:28.912 ServerApp] jupyter_lsp | extension was successfully linked.
+[I 2025-05-21 09:20:28.916 ServerApp] jupyter_server_terminals | extension was successfully linked.
+[W 2025-05-21 09:20:28.918 LabApp] 'allow_origin' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[I 2025-05-21 09:20:28.920 ServerApp] jupyterlab | extension was successfully linked.
+[I 2025-05-21 09:20:28.923 ServerApp] notebook | extension was successfully linked.
+[I 2025-05-21 09:20:29.308 ServerApp] notebook_shim | extension was successfully linked.
+[I 2025-05-21 09:20:29.400 ServerApp] notebook_shim | extension was successfully loaded.
+[I 2025-05-21 09:20:29.402 ServerApp] jupyter_lsp | extension was successfully loaded.
+[I 2025-05-21 09:20:29.403 ServerApp] jupyter_server_terminals | extension was successfully loaded.
+[I 2025-05-21 09:20:29.412 LabApp] JupyterLab extension loaded from /hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyterlab
+[I 2025-05-21 09:20:29.412 LabApp] JupyterLab application directory is /hpc/srs/local/miniconda3/envs/apollo_castep/share/jupyter/lab
+[I 2025-05-21 09:20:29.413 LabApp] Extension Manager is 'pypi'.
+[I 2025-05-21 09:20:29.464 ServerApp] jupyterlab | extension was successfully loaded.
+[I 2025-05-21 09:20:29.470 ServerApp] notebook | extension was successfully loaded.
+[I 2025-05-21 09:20:29.470 ServerApp] Serving notebooks from local directory: /hpc/srs/Python/modules/SRSCALCUTILS/scripts
+[I 2025-05-21 09:20:29.471 ServerApp] Jupyter Server 2.16.0 is running at:
+[I 2025-05-21 09:20:29.471 ServerApp] http://p021:8888/tree
+[I 2025-05-21 09:20:29.471 ServerApp]     http://127.0.0.1:8888/tree
+[I 2025-05-21 09:20:29.471 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[I 2025-05-21 09:20:29.512 ServerApp] Skipped non-installed server(s): bash-language-server, dockerfile-language-server-nodejs, javascript-typescript-langserver, jedi-language-server, julia-language-server, pyright, python-language-server, python-lsp-server, r-languageserver, sql-language-server, texlab, typescript-language-server, unified-language-server, vscode-css-languageserver-bin, vscode-html-languageserver-bin, vscode-json-languageserver-bin, yaml-language-server
+[W 2025-05-21 09:20:31.011 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815631007 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:31.011 ServerApp] wrote error: 'Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1848, in _execute
+        result = await result
+                 ^^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/auth/decorator.py", line 73, in inner
+        return await out
+               ^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/handlers.py", line 75, in get
+        model = await ensure_async(km.kernel_model(kernel_id))
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 508, in kernel_model
+        self._check_kernel_id(kernel_id)
+        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 539, in _check_kernel_id
+        raise web.HTTPError(404, "Kernel does not exist: %s" % kernel_id)
+    tornado.web.HTTPError: HTTP 404: Not Found (Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece)
+[W 2025-05-21 09:20:31.015 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815631007 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 4.17ms referer=None
+[W 2025-05-21 09:20:31.388 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:31.462 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 74.36ms referer=None
+[W 2025-05-21 09:20:31.464 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815631463 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:31.464 ServerApp] wrote error: 'Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1848, in _execute
+        result = await result
+                 ^^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/auth/decorator.py", line 73, in inner
+        return await out
+               ^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/handlers.py", line 75, in get
+        model = await ensure_async(km.kernel_model(kernel_id))
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 508, in kernel_model
+        self._check_kernel_id(kernel_id)
+        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 539, in _check_kernel_id
+        raise web.HTTPError(404, "Kernel does not exist: %s" % kernel_id)
+    tornado.web.HTTPError: HTTP 404: Not Found (Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece)
+[W 2025-05-21 09:20:31.465 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815631463 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 1.01ms referer=None
+[W 2025-05-21 09:20:32.764 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:32.764 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 0.64ms referer=None
+[W 2025-05-21 09:20:32.766 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815632765 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:32.766 ServerApp] wrote error: 'Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1848, in _execute
+        result = await result
+                 ^^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/auth/decorator.py", line 73, in inner
+        return await out
+               ^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/handlers.py", line 75, in get
+        model = await ensure_async(km.kernel_model(kernel_id))
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 508, in kernel_model
+        self._check_kernel_id(kernel_id)
+        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 539, in _check_kernel_id
+        raise web.HTTPError(404, "Kernel does not exist: %s" % kernel_id)
+    tornado.web.HTTPError: HTTP 404: Not Found (Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece)
+[W 2025-05-21 09:20:32.767 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815632765 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 0.97ms referer=None
+[W 2025-05-21 09:20:33.711 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:33.711 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece/channels?session_id=43c780b0-624a-42f6-b86c-6458cf8ec510 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 0.58ms referer=None
+[W 2025-05-21 09:20:33.714 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815633712 (10.0.28.101): Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece
+[W 2025-05-21 09:20:33.714 ServerApp] wrote error: 'Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1848, in _execute
+        result = await result
+                 ^^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/auth/decorator.py", line 73, in inner
+        return await out
+               ^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/handlers.py", line 75, in get
+        model = await ensure_async(km.kernel_model(kernel_id))
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 508, in kernel_model
+        self._check_kernel_id(kernel_id)
+        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/services/kernels/kernelmanager.py", line 539, in _check_kernel_id
+        raise web.HTTPError(404, "Kernel does not exist: %s" % kernel_id)
+    tornado.web.HTTPError: HTTP 404: Not Found (Kernel does not exist: d12b860d-4d2e-4f42-b655-d4ccf77b3ece)
+[W 2025-05-21 09:20:33.714 ServerApp] 404 GET /api/kernels/d12b860d-4d2e-4f42-b655-d4ccf77b3ece?1747815633712 (d1c046f4a53247d9b54ce3494ebd4a8d@10.0.28.101) 1.07ms referer=None
+[I 2025-05-21 09:20:36.148 ServerApp] 302 GET / (@127.0.0.1) 0.23ms
+[I 2025-05-21 09:20:36.149 ServerApp] 302 GET / (@127.0.0.1) 0.46ms
+[I 2025-05-21 09:20:36.165 ServerApp] 302 GET / (@127.0.0.1) 14.80ms
+[I 2025-05-21 09:20:36.166 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.47ms
+[I 2025-05-21 09:20:36.166 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.54ms
+[I 2025-05-21 09:20:36.172 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 1.02ms
+[W 2025-05-21 09:20:36.224 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.225 ServerApp] 403 GET /api/kernelspecs?1747815636222 (@127.0.0.1) 1.24ms referer=None
+[W 2025-05-21 09:20:36.226 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.226 ServerApp] 403 GET /api/kernels?1747815636223 (@127.0.0.1) 0.69ms referer=None
+[W 2025-05-21 09:20:36.227 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.227 ServerApp] 403 GET /api/kernels?1747815636225 (@127.0.0.1) 0.86ms referer=None
+[W 2025-05-21 09:20:36.228 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.228 ServerApp] 403 GET /api/sessions?1747815636225 (@127.0.0.1) 1.78ms referer=None
+[W 2025-05-21 09:20:36.229 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.230 ServerApp] 403 GET /api/kernelspecs?1747815636226 (@127.0.0.1) 0.66ms referer=None
+[W 2025-05-21 09:20:36.230 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.231 ServerApp] 403 GET /api/kernels?1747815636227 (@127.0.0.1) 0.66ms referer=None
+[W 2025-05-21 09:20:36.231 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.232 ServerApp] 403 GET /api/kernelspecs?1747815636227 (@127.0.0.1) 0.85ms referer=None
+[W 2025-05-21 09:20:36.233 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.233 ServerApp] 403 GET /api/kernels?1747815636229 (@127.0.0.1) 1.00ms referer=None
+[W 2025-05-21 09:20:36.234 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.234 ServerApp] 403 GET /api/sessions?1747815636229 (@127.0.0.1) 1.90ms referer=None
+[I 2025-05-21 09:20:36.234 ServerApp] 302 GET / (@127.0.0.1) 1.89ms
+[W 2025-05-21 09:20:36.235 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.236 ServerApp] 403 GET /api/kernelspecs?1747815636231 (@127.0.0.1) 0.70ms referer=None
+[I 2025-05-21 09:20:36.236 ServerApp] 302 GET / (@127.0.0.1) 0.16ms
+[I 2025-05-21 09:20:36.237 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.21ms
+[I 2025-05-21 09:20:36.238 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.21ms
+[W 2025-05-21 09:20:36.271 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.272 ServerApp] 403 GET /api/kernelspecs?1747815636269 (@127.0.0.1) 0.71ms referer=None
+[W 2025-05-21 09:20:36.273 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.273 ServerApp] 403 GET /api/kernelspecs?1747815636270 (@127.0.0.1) 0.86ms referer=None
+[W 2025-05-21 09:20:36.274 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.274 ServerApp] 403 GET /api/kernels?1747815636269 (@127.0.0.1) 1.79ms referer=None
+[W 2025-05-21 09:20:36.275 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.275 ServerApp] 403 GET /api/kernels?1747815636271 (@127.0.0.1) 1.31ms referer=None
+[W 2025-05-21 09:20:36.276 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.276 ServerApp] 403 GET /api/kernels?1747815636273 (@127.0.0.1) 0.63ms referer=None
+[W 2025-05-21 09:20:36.277 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.278 ServerApp] 403 GET /api/sessions?1747815636273 (@127.0.0.1) 0.70ms referer=None
+[W 2025-05-21 09:20:36.278 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.279 ServerApp] 403 GET /api/kernels?1747815636272 (@127.0.0.1) 0.88ms referer=None
+[W 2025-05-21 09:20:36.279 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.280 ServerApp] 403 GET /api/sessions?1747815636273 (@127.0.0.1) 1.78ms referer=None
+[W 2025-05-21 09:20:36.280 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.281 ServerApp] 403 GET /api/kernelspecs?1747815636276 (@127.0.0.1) 0.72ms referer=None
+[W 2025-05-21 09:20:36.282 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.282 ServerApp] 403 GET /api/kernelspecs?1747815636274 (@127.0.0.1) 0.75ms referer=None
+[I 2025-05-21 09:20:36.283 ServerApp] 302 GET / (@127.0.0.1) 0.19ms
+[I 2025-05-21 09:20:36.283 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.22ms
+[W 2025-05-21 09:20:36.312 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.313 ServerApp] 403 GET /api/kernelspecs?1747815636310 (@127.0.0.1) 0.65ms referer=None
+[W 2025-05-21 09:20:36.314 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.314 ServerApp] 403 GET /api/kernels?1747815636312 (@127.0.0.1) 0.67ms referer=None
+[W 2025-05-21 09:20:36.315 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.315 ServerApp] 403 GET /api/kernels?1747815636313 (@127.0.0.1) 0.62ms referer=None
+[W 2025-05-21 09:20:36.316 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.317 ServerApp] 403 GET /api/sessions?1747815636314 (@127.0.0.1) 0.67ms referer=None
+[W 2025-05-21 09:20:36.317 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:20:36.317 ServerApp] 403 GET /api/kernelspecs?1747815636314 (@127.0.0.1) 0.69ms referer=None
+[I 2025-05-21 09:23:07.234 ServerApp] User 3309c10cb1ca4ecca0166fbd490e07ee logged in.
+[I 2025-05-21 09:23:07.236 ServerApp] 302 POST /login? (3309c10cb1ca4ecca0166fbd490e07ee@127.0.0.1) 109.92ms
+[I 2025-05-21 09:23:16.327 ServerApp] Kernel started: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:23:21.803 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[W 2025-05-21 09:23:21.804 ServerApp] The websocket_ping_timeout (90000) cannot be longer than the websocket_ping_interval (30000).
+    Setting websocket_ping_timeout=30000
+[I 2025-05-21 09:23:22.133 ServerApp] 302 GET / (@127.0.0.1) 0.44ms
+[I 2025-05-21 09:23:22.133 ServerApp] 302 GET / (@127.0.0.1) 0.40ms
+[I 2025-05-21 09:23:22.149 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 1.70ms
+[I 2025-05-21 09:23:22.149 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 1.73ms
+[W 2025-05-21 09:23:22.200 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.207 ServerApp] 403 GET /api/kernelspecs?1747815802199 (@127.0.0.1) 7.82ms referer=None
+[W 2025-05-21 09:23:22.210 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.210 ServerApp] 403 GET /api/kernels?1747815802199 (@127.0.0.1) 0.71ms referer=None
+[W 2025-05-21 09:23:22.211 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.214 ServerApp] 403 GET /api/kernels?1747815802201 (@127.0.0.1) 2.87ms referer=None
+[W 2025-05-21 09:23:22.214 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.214 ServerApp] 403 GET /api/sessions?1747815802201 (@127.0.0.1) 3.34ms referer=None
+[W 2025-05-21 09:23:22.214 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.215 ServerApp] 403 GET /api/kernelspecs?1747815802209 (@127.0.0.1) 3.80ms referer=None
+[I 2025-05-21 09:23:22.215 ServerApp] 302 GET / (@127.0.0.1) 0.16ms
+[I 2025-05-21 09:23:22.218 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.24ms
+[W 2025-05-21 09:23:22.278 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.279 ServerApp] 403 GET /api/kernelspecs?1747815802277 (@127.0.0.1) 0.73ms referer=None
+[W 2025-05-21 09:23:22.282 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.282 ServerApp] 403 GET /api/kernels?1747815802278 (@127.0.0.1) 1.17ms referer=None
+[W 2025-05-21 09:23:22.282 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.283 ServerApp] 403 GET /api/kernels?1747815802279 (@127.0.0.1) 1.60ms referer=None
+[W 2025-05-21 09:23:22.283 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.285 ServerApp] 403 GET /api/sessions?1747815802280 (@127.0.0.1) 3.90ms referer=None
+[W 2025-05-21 09:23:22.285 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.286 ServerApp] 403 GET /api/kernelspecs?1747815802280 (@127.0.0.1) 4.34ms referer=None
+[I 2025-05-21 09:23:22.287 ServerApp] 302 GET / (@127.0.0.1) 0.16ms
+[I 2025-05-21 09:23:22.287 JupyterNotebookApp] 302 GET /tree? (@127.0.0.1) 0.21ms
+[W 2025-05-21 09:23:22.325 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.326 ServerApp] 403 GET /api/kernelspecs?1747815802324 (@127.0.0.1) 0.65ms referer=None
+[W 2025-05-21 09:23:22.328 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.329 ServerApp] 403 GET /api/kernels?1747815802324 (@127.0.0.1) 1.00ms referer=None
+[W 2025-05-21 09:23:22.329 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.329 ServerApp] 403 GET /api/kernels?1747815802325 (@127.0.0.1) 1.44ms referer=None
+[W 2025-05-21 09:23:22.330 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.332 ServerApp] 403 GET /api/sessions?1747815802326 (@127.0.0.1) 3.66ms referer=None
+[W 2025-05-21 09:23:22.333 ServerApp] wrote error: 'Forbidden'
+    Traceback (most recent call last):
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 1846, in _execute
+        result = method(*self.path_args, **self.path_kwargs)
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/tornado/web.py", line 3363, in wrapper
+        url = self.get_login_url()
+      File "/hpc/srs/local/miniconda3/envs/apollo_castep/lib/python3.13/site-packages/jupyter_server/base/handlers.py", line 784, in get_login_url
+        raise web.HTTPError(403)
+    tornado.web.HTTPError: HTTP 403: Forbidden
+[W 2025-05-21 09:23:22.333 ServerApp] 403 GET /api/kernelspecs?1747815802328 (@127.0.0.1) 0.67ms referer=None
+[I 2025-05-21 09:23:33.190 ServerApp] User 36666735c0dc438681afe0bd67ac1d62 logged in.
+[I 2025-05-21 09:23:33.191 ServerApp] 302 POST /login? (36666735c0dc438681afe0bd67ac1d62@127.0.0.1) 39.49ms
+[I 2025-05-21 09:26:29.597 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:26:29.601 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:26:29.605 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:26:29.605 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[W 2025-05-21 09:26:34.113 ServerApp] Nudge: attempt 10 on kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:26:36.825 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:26:36.826 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:26:36.830 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:26:36.831 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:27:45.578 ServerApp] Kernel interrupted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:38:25.814 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:38:25.817 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:38:25.822 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:38:25.823 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:39:48.832 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:39:48.835 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:39:48.839 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:39:48.840 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:40:10.198 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:40:10.199 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:40:10.203 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:40:10.203 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:48:13.220 ServerApp] Kernel restarted: 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
+[I 2025-05-21 09:48:13.224 ServerApp] Starting buffering for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[I 2025-05-21 09:48:13.229 ServerApp] Connecting to kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8.
+[I 2025-05-21 09:48:13.229 ServerApp] Restoring connection for 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8:d4f9ec4c-d946-4da4-9d23-947726de685b
+[W 2025-05-21 09:48:17.742 ServerApp] Nudge: attempt 10 on kernel 1ab2d7f5-ae76-41db-be30-30d2fe1dc4c8
