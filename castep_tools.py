@@ -720,41 +720,9 @@ def plot_sequence(
 
 
 
-
-# ============================================================================
-#  Macro like functions doing multiple things
-# ============================================================================
-def optimisation_summary_macro_1(castep_paths):
-    for castep_path in castep_paths:
-        # Header and error information
-        print_filename(castep_path)
-        #ct.extract_warnings(castep_path,verbose=True)
-
-        # Energy convergence
-        convergence = extract_LBFGS_energies(castep_path)
-        final_enthalpy = extract_LBFGS_final_enthalpy(castep_path)
-        print('Final enthalpy = {} eV.'.format(final_enthalpy))
-        plot_energy_vs_iteration(convergence, title=castep_path.stem+' '+str(final_enthalpy),figsize=(5,2))
-        
-        # Unit cell parameters
-        cell = extract_lattice_parameters(castep_path,a0=3.8668346, vac=15.0)
-        cell_df = pd.DataFrame(cell.items(), columns=["Cell parameters", "Value"])
-        display(cell_df) 
-
-        # General parameters
-        general_params =  extract_summary_parameters(castep_path)
-        general_params_df = pd.DataFrame(general_params.items(), columns=["General parameter", "Value"])
-        display(general_params_df) 
-
-        # Show structure
-        atoms = fractional_coords_from_castep(castep_path)
-        view = view_structure(atoms,show_structure=False)
-        display(view)
-        img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
-        display(img)
         
 # ============================================================================
-#  Generate CASTEP cell files
+#  Write CASTEP files
 # ============================================================================
 
 def write_block_lattice_cart(lattice_cart,na=1,nb=1,nc=1):
@@ -776,7 +744,7 @@ def write_block_lattice_cart(lattice_cart,na=1,nb=1,nc=1):
     block_text = "\n".join(lines)
     return(block_text)
 
-def write_cell_constraints(constraints=None):
+def write_cell_constraints(cell_constraints=None):
     """
     Write a block of cell constraints.
 
@@ -791,22 +759,22 @@ def write_cell_constraints(constraints=None):
     - A magnitude index (1–3) cannot appear also in the angle indices (4–6).
     """
     # 1) Default if none provided
-    if constraints is None:
-        constraints = [
+    if cell_constraints is None:
+        cell_constraints = [
             [0, 0, 0],
             [0, 0, 0],
         ]
 
     # 2) Normalize & validate
-    constraints = np.asarray(constraints, dtype=int)
-    if constraints.shape != (2, 3):
+    cell_constraints = np.asarray(cell_constraints, dtype=int)
+    if cell_constraints.shape != (2, 3):
         raise ValueError(
             f"constraints must be shape (2,3), got {constraints.shape}"
         )
 
     # 3) Build the lines
     lines = ["%BLOCK CELL_CONSTRAINTS"]
-    for row in constraints:
+    for row in cell_constraints:
         # each integer in a 4-char field, space-separated
         fields = [f"{int(val):4d}" for val in row]
         lines.append("    " + " ".join(fields))
@@ -815,79 +783,43 @@ def write_cell_constraints(constraints=None):
     return "\n".join(lines)
 
 
-import numpy as np
-
 def write_positions_frac(
-    na=1,
-    nb=1,
-    nc=1,
-    positions_frac=None
-):
+    positions_frac: np.ndarray
+) -> str:
     """
     Generate a fractional-coordinate supercell block.
 
     Parameters
     ----------
-    na, nb, nc : int
-        Number of repetitions along x, y, z.
-    positions_frac : array-like of shape (M,4), optional
+    positions_frac : ndarray, shape (M,4), dtype object, optional
         Each row is [atom_label, frac_x, frac_y, frac_z].
         If None, uses the default 4-atom Si (001) basis.
 
     Returns
     -------
     str
-        A text block in the form:
+        A text block formatted as:
         %BLOCK positions_frac
            Atom   x1      y1      z1
            ...
         %ENDBLOCK positions_frac
     """
-    # -- set up the default 4-atom Si basis if needed
+    # Default Si (001) basis
     if positions_frac is None:
-        # list of tuples: (atom_label, x, y, z)
-        positions_frac = [
-            ("Si", 0.0,  0.0,  0.0),
-            ("Si", 0.5,  0.0,  0.25),
-            ("Si", 0.5,  0.5,  0.5),
-            ("Si", 0.0,  0.5,  0.75),
-        ]
-    # -- otherwise we expect an array-like of shape (M,4)
-    #    where element [i,0] is a string label, and [i,1:4] are fractional coords
-    positions_frac = np.asarray(positions_frac, dtype=object)
-    if positions_frac.ndim != 2 or positions_frac.shape[1] != 4:
-        raise ValueError("positions_frac must be array-like of shape (M,4) "
-                         "(atom_label, frac_x, frac_y, frac_z)")
+        positions_frac = np.array([
+            ['Si', 0.0,  0.0,  0.0],
+            ['Si', 0.5,  0.0,  0.25],
+            ['Si', 0.5,  0.5,  0.5],
+            ['Si', 0.0,  0.5,  0.75],
+        ], dtype=object)
 
-    # split into labels and coords
-    labels = positions_frac[:, 0].astype(str)
-    coords = positions_frac[:, 1:].astype(float)
-
-    super_cell = []
-    super_labels = []
-
-    # tile the basis over each (i,j,k) cell
-    for i in range(na):
-        for j in range(nb):
-            for k in range(nc):
-                # shift then normalize into supercell fractional coords
-                # and carry along the atom label
-                shifted = (coords + np.array([i, j, k])) / np.array([na, nb, nc])
-                super_cell.append(shifted)
-                super_labels.extend(labels)
-
-    super_cell = np.vstack(super_cell)   # shape (M*na*nb*nc, 3)
-
-    # build the text block
+    # Build text block
     lines = ["%BLOCK positions_frac"]
-    for atom_label, (x, y, z) in zip(super_labels, super_cell):
-        lines.append(
-            f"   {atom_label:2s}   {x:16.10f}{y:16.10f}{z:16.10f}"
-        )
+    for atom_label, x, y, z in positions_frac:
+        lines.append(f"   {atom_label:2s}   {float(x):16.10f}{float(y):16.10f}{float(z):16.10f}")
     lines.append("%ENDBLOCK positions_frac")
 
     return "\n".join(lines)
-
 
 
 def write_kpoints_mp_grid(kpoints_mp_grid):
@@ -902,7 +834,8 @@ def write_kpoints_mp_grid(kpoints_mp_grid):
     else:
         return ""
 
-def write_cell_file(
+
+def write_bulk_cell_file(
         title = None,
         path=".",
         filename="castep_input",
@@ -911,7 +844,7 @@ def write_cell_file(
         nc=1,
         lattice_cart=None,
         positions_frac=None,
-        constraints=None,
+        cell_constraints=None,
         fix_all_ions=True,
         symmetry_generate=None,
         symmetry_tol = None,
@@ -944,8 +877,8 @@ def write_cell_file(
         ])
     lattice_block = write_block_lattice_cart(lattice_cart, na=na, nb=nb, nc=nc)
 
-    constraint_block = write_cell_constraints(constraints=constraints)
-    positions_frac_block = write_positions_frac(na=na, nb=nb, nc=nc, positions_frac=positions_frac)
+    cell_constraint_block = write_cell_constraints(cell_constraints=cell_constraints)
+    positions_frac_block = write_positions_frac(positions_frac=positions_frac)
     kpoints_mp_grid_block = write_kpoints_mp_grid(kpoints_mp_grid)
     
     if symmetry_generate:
@@ -969,7 +902,7 @@ def write_cell_file(
     full_text = "\n\n".join([
         title_block,
         lattice_block, 
-        constraint_block, 
+        cell_constraint_block, 
         positions_frac_block,
         symmetry_block,
         fix_all_ions_block,
@@ -995,9 +928,53 @@ def write_cell_file(
 
     return outfile
 
-# ============================================================================
-#  Generate CASTEP param files
-# ============================================================================
+
+def write_ionic_constraints(atom_array):
+    """
+    Generate CASTEP ionic constraint entries for a list of selected atoms,
+    wrapped in BLOCK/ENDBLOCK.
+
+    Parameters
+    ----------
+    atom_array : array-like, shape (N,6)
+        Output from select_atoms_by_region:
+        [input_index, is_selected, atom_symbol, frac_x, frac_y, frac_z]
+
+    Returns
+    -------
+    lines : list of str
+        Text lines beginning with '%BLOCK ionic_constraints',
+        followed by three constraint lines per atom, ending with
+        '%ENDBLOCK ionic_constraints'.
+    """
+    arr = np.array(atom_array, dtype=object)
+    # Extract columns
+    is_selected = np.array(arr[:, 1], dtype=bool)
+    symbols = arr[:, 2]
+
+    constraints = []
+    out_idx = 1  # global row counter
+    atom_id = 1  # per-atom ID for constraints
+
+    # Build raw constraint rows
+    for sel, sym in zip(is_selected, symbols):
+        if not sel:
+            continue
+        for dx, dy, dz in [(1, 0, 0), (0, 1, 0), (0, 0, 1)]:
+            constraints.append((out_idx, sym, atom_id, dx, dy, dz))
+            out_idx += 1
+        atom_id += 1
+
+    # Format lines with BLOCK wrapper
+    lines = ['%BLOCK ionic_constraints']
+    for idx, sym, aid, dx, dy, dz in constraints:
+        lines.append(
+            f"{idx:5d} {sym:}        {aid:>2d}    {dx:10.8f}    {dy:10.8f}    {dz:10.8f}"
+        )
+    lines.append('%ENDBLOCK ionic_constraints')
+
+    return lines
+
 
 def write_param_file(
         params,
@@ -1068,6 +1045,178 @@ def write_param_file(
         print(full_text)
 
     return outfile
+
+# ============================================================================
+#  Manipulate coordinates and cells
+# ============================================================================
+
+def create_supercell_from_fractional_coords(
+    positions_frac: np.ndarray,
+    na: int = 1,
+    nb: int = 1,
+    nc: int = 1
+) -> np.ndarray:
+    """
+    Generate a supercell from fractional atomic positions.
+
+    Parameters
+    ----------
+    positions_frac : ndarray, shape (M,4), dtype object
+        Each row is [atom_label, frac_x, frac_y, frac_z].
+    na, nb, nc : int
+        Number of repetitions along x, y, z.
+
+    Returns
+    -------
+    supercell_frac : ndarray, shape (M*na*nb*nc, 4), dtype object
+        Each row is [atom_label, frac_x, frac_y, frac_z] in the supercell.
+    """
+    # Validate input
+    positions_frac = np.asarray(positions_frac, dtype=object)
+    if positions_frac.ndim != 2 or positions_frac.shape[1] != 4:
+        raise ValueError(
+            "positions_frac must be array-like of shape (M,4) "
+            "(atom_label, frac_x, frac_y, frac_z)"
+        )
+
+    labels = positions_frac[:, 0]
+    coords = positions_frac[:, 1:].astype(float)
+
+    supercell_list = []
+
+    for i in range(na):
+        for j in range(nb):
+            for k in range(nc):
+                # shift then normalize
+                shifted = (coords + np.array([i, j, k])) / np.array([na, nb, nc])
+                # stack labels and shifted coords
+                block = np.empty((shifted.shape[0], 4), dtype=object)
+                block[:, 0] = labels
+                block[:, 1:] = shifted
+                supercell_list.append(block)
+
+    supercell_frac = np.vstack(supercell_list)
+
+    supercell_frac = sort_positions_frac(supercell_frac, order = ['z', 'y', 'x', 'atom'], descending=True)
+
+    return supercell_frac
+
+
+def sort_positions_frac(arr: np.ndarray,
+                        order: list[str] = ['z', 'y', 'x', 'atom'],
+                        descending: bool = True) -> np.ndarray:
+    """
+    Sorts an array of shape (N, 4) with dtype=object based on specified fields.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of shape (N, 4), with columns ['atom', 'x', 'y', 'z'] and dtype=object.
+    order : list[str], optional
+        List of field names to sort by, in priority order (highest first).
+        Supported names: 'atom', 'x', 'y', 'z'. Defaults to ['z', 'y', 'x', 'atom'].
+    descending : bool, optional
+        If True, sort from highest to lowest along the specified order;
+        if False, sort from lowest to highest. Default is False.
+
+    Returns
+    -------
+    np.ndarray
+        New sorted array of the same shape and dtype.
+    """
+    # Supported fields for sorting
+    FIELD_INDICES = {
+        'atom': 0,
+        'x': 1,
+        'y': 2,
+        'z': 3,
+    }
+    # Validate order list
+    for field in order:
+        if field not in FIELD_INDICES:
+            raise ValueError(f"Unsupported sort field: {field}. "
+                             f"Choose from {list(FIELD_INDICES.keys())}.")
+
+    # Convert to list of rows for sorting
+    rows = arr.tolist()
+
+    # Create a tuple key based on requested fields
+    def sort_key(row: list) -> tuple:
+        return tuple(row[FIELD_INDICES[f]] for f in order)
+
+    # Sort and return; reverse if descending
+    rows_sorted = sorted(rows, key=sort_key, reverse=descending)
+    return np.array(rows_sorted, dtype=object)
+
+
+def select_atoms_by_region(positions_frac, lattice_cart, condition,
+                           exclude=None):
+    """
+    Select atoms by a region defined in Cartesian space, with option to exclude by index.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Rows of [element_symbol, frac_x, frac_y, frac_z].
+    lattice_cart : array-like, shape (3, 3)
+        Cartesian lattice vectors (rows are unit cell vectors in Å).
+    condition : str
+        Boolean expression using x, y, z (Å) and atom (symbol),
+        e.g. "z < 3 and atom=='Si'".
+    exclude : list of int, range, slice, or tuple, optional
+        Atom indices (1-based), ranges, or slices to force exclude.
+        E.g. [1, range(3, 6), slice(8, 11), (13, 15)].
+
+    Returns
+    -------
+    result : ndarray, shape (N, 6)
+        [index(int,1-based), is_selected(bool), element_symbol, frac_x, frac_y, frac_z] per atom.
+    """
+    arr = np.array(positions_frac, dtype=object)
+    symbols = arr[:, 0]
+    frac = arr[:, 1:].astype(float)
+
+    # Build exclude set of zero-based indices
+    exclude_set = set()
+    if exclude is not None:
+        for item in exclude:
+            if isinstance(item, int):
+                exclude_set.add(item - 1)
+            elif isinstance(item, range):
+                exclude_set.update(i - 1 for i in item)
+            elif isinstance(item, slice):
+                start = item.start or 1
+                stop = item.stop or len(arr)
+                exclude_set.update(i for i in range(start - 1, stop))
+            elif isinstance(item, tuple) and len(item) == 2:
+                start, end = item
+                exclude_set.update(i - 1 for i in range(start, end + 1))
+            else:
+                raise ValueError(
+                    f"Invalid exclude specifier '{item}'; use int, range, slice, or (start, end) tuple"
+                )
+
+    # Convert fractional to Cartesian
+    cart = np.dot(frac, np.array(lattice_cart, dtype=float))
+
+    output = []
+    for idx, (atom, fcoords, ccoords) in enumerate(zip(symbols, frac, cart)):
+        if idx in exclude_set:
+            is_sel = False
+        else:
+            x, y, z = ccoords
+            try:
+                is_sel = bool(eval(condition, {}, {'x': x, 'y': y, 'z': z, 'atom': atom}))
+            except Exception as e:
+                raise ValueError(
+                    f"Error evaluating condition '{condition}' on atom index {idx+1} ({atom}): {e}"
+                )
+        py_fracs = [float(v) for v in fcoords]
+        # Prepend 1-based index
+        output.append([idx+1, is_sel, atom, *py_fracs])
+
+    return np.array(output, dtype=object)
+
 
 
 # ============================================================================
@@ -1157,3 +1306,39 @@ date
         print(content)
 
     return job_file
+
+
+
+
+
+# ============================================================================
+#  Macro like functions doing multiple things
+# ============================================================================
+def optimisation_summary_macro_1(castep_paths):
+    for castep_path in castep_paths:
+        # Header and error information
+        print_filename(castep_path)
+        #ct.extract_warnings(castep_path,verbose=True)
+
+        # Energy convergence
+        convergence = extract_LBFGS_energies(castep_path)
+        final_enthalpy = extract_LBFGS_final_enthalpy(castep_path)
+        print('Final enthalpy = {} eV.'.format(final_enthalpy))
+        plot_energy_vs_iteration(convergence, title=castep_path.stem+' '+str(final_enthalpy),figsize=(5,2))
+        
+        # Unit cell parameters
+        cell = extract_lattice_parameters(castep_path,a0=3.8668346, vac=15.0)
+        cell_df = pd.DataFrame(cell.items(), columns=["Cell parameters", "Value"])
+        display(cell_df) 
+
+        # General parameters
+        general_params =  extract_summary_parameters(castep_path)
+        general_params_df = pd.DataFrame(general_params.items(), columns=["General parameter", "Value"])
+        display(general_params_df) 
+
+        # Show structure
+        atoms = fractional_coords_from_castep(castep_path)
+        view = view_structure(atoms,show_structure=False)
+        display(view)
+        img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
+        display(img)
