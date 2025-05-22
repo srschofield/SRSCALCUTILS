@@ -26,6 +26,7 @@ from pathlib import Path
 import math
 from ase import Atoms
 import nglview as nv        # pip install nglview
+from collections import defaultdict
 
 from IPython.display import display, Image as StaticImage
 import time
@@ -948,28 +949,34 @@ def write_ionic_constraints(atom_array):
         '%ENDBLOCK ionic_constraints'.
     """
     arr = np.array(atom_array, dtype=object)
+
     # Extract columns
-    is_selected = np.array(arr[:, 1], dtype=bool)
+    is_selected = arr[:, 1].astype(bool)
     symbols = arr[:, 2]
+
+    # Build running count per symbol
+    counts = defaultdict(int)
+    per_symbol_count = []
+    for sym in symbols:
+        counts[sym] += 1
+        per_symbol_count.append(counts[sym])
 
     constraints = []
     out_idx = 1  # global row counter
-    atom_id = 1  # per-atom ID for constraints
 
     # Build raw constraint rows
-    for sel, sym in zip(is_selected, symbols):
+    for sel, sym, sym_count in zip(is_selected, symbols, per_symbol_count):
         if not sel:
             continue
         for dx, dy, dz in [(1, 0, 0), (0, 1, 0), (0, 0, 1)]:
-            constraints.append((out_idx, sym, atom_id, dx, dy, dz))
+            constraints.append((out_idx, sym, sym_count, dx, dy, dz))
             out_idx += 1
-        atom_id += 1
 
     # Format lines with BLOCK wrapper
     lines = ['%BLOCK ionic_constraints']
     for idx, sym, aid, dx, dy, dz in constraints:
         lines.append(
-            f"{idx:5d} {sym:}        {aid:>2d}    {dx:10.8f}    {dy:10.8f}    {dz:10.8f}"
+            f"{idx:5d} {sym:<2}        {aid:>2d}    {dx:10.8f}    {dy:10.8f}    {dz:10.8f}"
         )
     lines.append('%ENDBLOCK ionic_constraints')
 
@@ -1052,9 +1059,8 @@ def write_param_file(
 
 def create_supercell_from_fractional_coords(
     positions_frac: np.ndarray,
-    na: int = 1,
-    nb: int = 1,
-    nc: int = 1
+    lattice_cart: np.ndarray,
+    n: np.ndarray
 ) -> np.ndarray:
     """
     Generate a supercell from fractional atomic positions.
@@ -1084,6 +1090,10 @@ def create_supercell_from_fractional_coords(
 
     supercell_list = []
 
+    na = n[0]
+    nb = n[1]
+    nc = n[2]
+
     for i in range(na):
         for j in range(nb):
             for k in range(nc):
@@ -1099,7 +1109,9 @@ def create_supercell_from_fractional_coords(
 
     supercell_frac = sort_positions_frac(supercell_frac, order = ['z', 'y', 'x', 'atom'], descending=True)
 
-    return supercell_frac
+    lattice_cart = (lattice_cart.T * n).T
+
+    return supercell_frac, lattice_cart
 
 
 def sort_positions_frac(arr: np.ndarray,
@@ -1148,8 +1160,6 @@ def sort_positions_frac(arr: np.ndarray,
     rows_sorted = sorted(rows, key=sort_key, reverse=descending)
     return np.array(rows_sorted, dtype=object)
 
-
-import numpy as np
 
 def select_atoms_by_region(positions_frac, lattice_cart, condition,
                            include=None, exclude=None):
