@@ -1149,10 +1149,12 @@ def sort_positions_frac(arr: np.ndarray,
     return np.array(rows_sorted, dtype=object)
 
 
+import numpy as np
+
 def select_atoms_by_region(positions_frac, lattice_cart, condition,
-                           exclude=None):
+                           include=None, exclude=None):
     """
-    Select atoms by a region defined in Cartesian space, with option to exclude by index.
+    Select atoms by a region defined in Cartesian space, with options to include or exclude by index.
 
     Parameters
     ----------
@@ -1163,9 +1165,12 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
     condition : str
         Boolean expression using x, y, z (Å) and atom (symbol),
         e.g. "z < 3 and atom=='Si'".
+    include : list of int, range, slice, or tuple, optional
+        Atom indices (1-based), ranges, or slices to force include (sets True).
+        Only affects listed atoms; others follow condition unless excluded.
     exclude : list of int, range, slice, or tuple, optional
-        Atom indices (1-based), ranges, or slices to force exclude.
-        E.g. [1, range(3, 6), slice(8, 11), (13, 15)].
+        Atom indices (1-based), ranges, or slices to force exclude (sets False).
+        Always overrides include and condition.
 
     Returns
     -------
@@ -1176,25 +1181,29 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
     symbols = arr[:, 0]
     frac = arr[:, 1:].astype(float)
 
-    # Build exclude set of zero-based indices
-    exclude_set = set()
-    if exclude is not None:
-        for item in exclude:
+    n_atoms = len(arr)
+    def build_index_set(spec):
+        s = set()
+        for item in spec or []:
             if isinstance(item, int):
-                exclude_set.add(item - 1)
+                s.add(item - 1)
             elif isinstance(item, range):
-                exclude_set.update(i - 1 for i in item)
+                s.update(i - 1 for i in item)
             elif isinstance(item, slice):
                 start = item.start or 1
-                stop = item.stop or len(arr)
-                exclude_set.update(i for i in range(start - 1, stop))
+                stop = item.stop or n_atoms
+                s.update(i for i in range(start - 1, stop))
             elif isinstance(item, tuple) and len(item) == 2:
                 start, end = item
-                exclude_set.update(i - 1 for i in range(start, end + 1))
+                s.update(i - 1 for i in range(start, end + 1))
             else:
                 raise ValueError(
-                    f"Invalid exclude specifier '{item}'; use int, range, slice, or (start, end) tuple"
+                    f"Invalid specifier '{item}'; use int, range, slice, or (start, end) tuple"
                 )
+        return s
+
+    include_set = build_index_set(include)
+    exclude_set = build_index_set(exclude)
 
     # Convert fractional to Cartesian
     cart = np.dot(frac, np.array(lattice_cart, dtype=float))
@@ -1203,6 +1212,8 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
     for idx, (atom, fcoords, ccoords) in enumerate(zip(symbols, frac, cart)):
         if idx in exclude_set:
             is_sel = False
+        elif idx in include_set:
+            is_sel = True
         else:
             x, y, z = ccoords
             try:
@@ -1212,7 +1223,6 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
                     f"Error evaluating condition '{condition}' on atom index {idx+1} ({atom}): {e}"
                 )
         py_fracs = [float(v) for v in fcoords]
-        # Prepend 1-based index
         output.append([idx+1, is_sel, atom, *py_fracs])
 
     return np.array(output, dtype=object)
