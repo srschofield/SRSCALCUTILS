@@ -1302,6 +1302,149 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
     return np.array(output, dtype=object)
 
 
+def select_atoms_by_plane(positions_frac, lattice_cart, axis, ref_value,
+                          tolerance=0.0, include=None, exclude=None):
+    """
+    Select atoms near a specific plane perpendicular to a given axis.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Rows of [element_symbol, frac_x, frac_y, frac_z].
+    lattice_cart : array-like, shape (3, 3)
+        Cartesian lattice vectors (rows are unit cell vectors in Å).
+    axis : {'x', 'y', 'z'}
+        Axis perpendicular to the plane (e.g. 'z' selects x-y planes).
+    ref_value : float or numeric string
+        Cartesian coordinate along the given axis in Å defining the plane.
+    tolerance : float or numeric string, optional
+        Distance tolerance in Å (default=0.0). Atoms with |coord - ref_value| <= tolerance are selected.
+    include : list of int, range, slice, or tuple, optional
+        Atom indices (1-based) to force include.
+    exclude : list of int, range, slice, or tuple, optional
+        Atom indices to force exclude.
+
+    Returns
+    -------
+    result : list of lists, shape (N, 6)
+        Each entry: [index (1-based), is_selected (bool), element_symbol,
+                     frac_x, frac_y, frac_z].
+    """
+    # Parse arrays
+    arr = np.array(positions_frac, dtype=object)
+    symbols = arr[:, 0]
+    frac = arr[:, 1:].astype(float)
+    lattice = np.array(lattice_cart, dtype=float)
+
+    # Build include/exclude index sets (0-based)
+    def build_index_set(spec):
+        s = set()
+        for item in spec or []:
+            if isinstance(item, int):
+                s.add(item - 1)
+            elif isinstance(item, range):
+                s.update(i - 1 for i in item)
+            elif isinstance(item, slice):
+                start = item.start or 1
+                stop = item.stop or len(arr)
+                s.update(i for i in range(start - 1, stop))
+            elif isinstance(item, tuple) and len(item) == 2:
+                start, end = item
+                s.update(i - 1 for i in range(start, end + 1))
+            else:
+                raise ValueError(f"Invalid index specifier: {item}")
+        return s
+
+    include_set = build_index_set(include)
+    exclude_set = build_index_set(exclude)
+
+    # Convert fractional to Cartesian coordinates
+    cart = frac.dot(lattice)
+
+    # Map axis to column
+    axis_map = {'x': 0, 'y': 1, 'z': 2}
+    try:
+        ai = axis_map[axis.lower()]
+    except KeyError:
+        raise ValueError("Axis must be one of 'x', 'y', or 'z'")
+
+    # Reference and tolerance as floats
+    try:
+        ref = float(ref_value)
+        tol = float(tolerance)
+    except Exception:
+        raise ValueError("ref_value and tolerance must be numeric or numeric strings.")
+
+    # Compute mask for numeric criteria
+    coords = cart[:, ai]
+    mask = np.abs(coords - ref) <= tol
+
+    # Build result list
+    result = []
+    for idx, (atom, fcoords) in enumerate(zip(symbols, frac)):
+        if idx in exclude_set:
+            sel = False
+        elif idx in include_set:
+            sel = True
+        else:
+            sel = bool(mask[idx])
+        result.append([idx + 1, sel, atom,
+                       float(fcoords[0]), float(fcoords[1]), float(fcoords[2])])
+
+    return result
+
+
+def find_plane_value(positions_frac, lattice_cart, axis, criteria):
+    """
+    Determine the plane coordinate along an axis based on criteria.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Rows of [element_symbol, frac_x, frac_y, frac_z].
+    lattice_cart : array-like, shape (3, 3)
+        Cartesian lattice vectors (rows are unit cell vectors in Å).
+    axis : {'x', 'y', 'z'}
+        Axis perpendicular to the plane.
+    criteria : {'minimum', 'maximum', 'centre'}
+        'minimum' returns the smallest coordinate, 'maximum' the largest,
+        'centre' the midpoint between min and max.
+
+    Returns
+    -------
+    plane_cart : float
+        Cartesian coordinate in Å of the plane.
+    plane_frac : float
+        Fractional coordinate (0–1) along the axis of the plane.
+    """
+    arr = np.array(positions_frac, dtype=object)
+    frac = arr[:, 1:].astype(float)
+    lattice = np.array(lattice_cart, dtype=float)
+
+    # Map axis to index
+    axis_map = {'x': 0, 'y': 1, 'z': 2}
+    try:
+        ai = axis_map[axis.lower()]
+    except KeyError:
+        raise ValueError("Axis must be one of 'x', 'y', or 'z'")
+
+    # Fractional coordinates along axis
+    frac_coords = frac[:, ai]
+    if criteria == 'minimum':
+        plane_frac = frac_coords.min()
+    elif criteria == 'maximum':
+        plane_frac = frac_coords.max()
+    elif criteria == 'centre':
+        plane_frac = (frac_coords.min() + frac_coords.max()) / 2.0
+    else:
+        raise ValueError("Criteria must be 'minimum', 'maximum', or 'centre'")
+
+    # Convert to Cartesian
+    cell_vec = lattice[ai]
+    plane_cart = plane_frac * np.linalg.norm(cell_vec)
+
+    return float(plane_cart), float(plane_frac)
+
 
 # ============================================================================
 #  Generate MYRIAD job submission scripts
