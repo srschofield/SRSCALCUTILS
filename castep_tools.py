@@ -1262,6 +1262,108 @@ def add_atoms_to_positions_frac(
     return positions_frac, new_lattice_cart
 
 
+def dimerise_displacement(
+    labeled_positions_frac,
+    lattice_cart,
+    dimer_direction,
+    displacement_direction,
+    displacement=0.5,
+    start_phase='+',
+    alternate=False,
+    wrap_axes=(1,1,1)
+):
+    """
+    Displace selected atoms in alternating directions (dimerisation):
+    pairing along `dimer_direction`, displacing along `displacement_direction`.
+
+    Parameters
+    ----------
+    labeled_positions_frac : sequence of [idx, flag, sym, fx, fy, fz]
+        Input atoms; only those with flag=True are processed.
+    lattice_cart : (3,3) array-like
+        Cartesian cell vectors (rows), used to convert Angstrom to fractional.
+    dimer_direction : {'x','y','z'}
+        Axis along which atoms are paired (chains formed by identical values
+        of the other two fractional coords).
+    displacement_direction : {'x','y','z'}
+        Axis along which to apply alternating displacement.
+    displacement : float, optional
+        Cartesian displacement magnitude in Angstrom (default=0.5).
+    start_phase : {'+','-'}, optional
+        Sign of the first displacement in the first chain (default='+').
+    alternate : bool, optional
+        If True, flip the start_phase for each new chain in order (default=False).
+    wrap_axes : length-3 sequence of 0/1, optional
+        Axes where periodic wrapping should apply (default=(1,1,1)).
+
+    Returns
+    -------
+    positions_frac : ndarray of shape (N, 4), dtype=object
+        Array of [symbol, fx, fy, fz] with updated fractional positions.
+
+    Raises
+    ------
+    ValueError
+        If any chain has an odd number of atoms or invalid directions.
+    """
+    # Map directions to indices
+    axes = {'x':0, 'y':1, 'z':2}
+    if dimer_direction not in axes or displacement_direction not in axes:
+        raise ValueError("`dimer_direction` and `displacement_direction` must be one of 'x','y','z'.")
+    dimer_ax = axes[dimer_direction]
+    disp_ax  = axes[displacement_direction]
+
+    # Convert displacement (Å) to fractional along disp_ax
+    disp_vec = np.zeros(3, dtype=float)
+    disp_vec[disp_ax] = displacement
+    inv_lat = np.linalg.inv(lattice_cart)
+    disp_frac = disp_vec @ inv_lat
+
+    # Prepare atom data
+    atoms = []
+    for idx, flag, sym, fx, fy, fz in labeled_positions_frac:
+        atoms.append({'flag': flag,
+                      'sym': sym,
+                      'coord': np.array([fx,fy,fz], float)})
+
+    # Group flagged atoms by the other two coords
+    groups = {}
+    for atom in atoms:
+        if not atom['flag']:
+            continue
+        key = tuple(np.delete(atom['coord'], dimer_ax))
+        groups.setdefault(key, []).append(atom)
+
+    # Check even sizes and apply alternating displacements
+    # Sort groups by key for consistent ordering
+    sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
+    for idx, (key, grp) in enumerate(sorted_items):
+        if len(grp) % 2 != 0:
+            raise ValueError(f"Chain at {key} has odd number of atoms ({len(grp)})")
+        # Determine phase for this chain
+        phase = start_phase
+        if alternate and (idx % 2 == 1):
+            phase = '+' if start_phase == '-' else '-'
+        sign = 1 if phase == '+' else -1
+        # Sort along dimer axis and apply
+        grp.sort(key=lambda a: a['coord'][dimer_ax])
+        for atom in grp:
+            atom['coord'][disp_ax] += sign * disp_frac[disp_ax]
+            sign *= -1
+
+    # Build output with wrapping/clamping
+    wrap = np.array(wrap_axes, int)
+    out = []
+    for atom in atoms:
+        c = atom['coord']
+        for i in range(3):
+            if wrap[i]:
+                c[i] %= 1.0
+            else:
+                c[i] = min(max(c[i], 0.0), 1.0)
+        out.append([atom['sym'], float(c[0]), float(c[1]), float(c[2])])
+
+    return np.array(out, dtype=object)
 
 
 def create_vacuum_spacing(
