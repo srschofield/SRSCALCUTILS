@@ -1203,8 +1203,6 @@ def bond_vector_from_spherical(theta, phi, bondlength, tol=1e-8):
     return np.array([x, y, z], dtype=float)
 
 
-import numpy as np
-
 def add_atoms_to_positions_frac(
     labeled_positions_frac,
     lattice_cart,
@@ -1308,108 +1306,108 @@ def add_atoms_to_positions_frac(
     return positions_frac, new_lattice_cart
 
 
-def dimerise_displacement(
-    labeled_positions_frac,
-    lattice_cart,
-    dimer_direction,
-    displacement_direction,
-    displacement=0.5,
-    start_phase='+',
-    alternate=False,
-    wrap_axes=(1,1,1)
-):
-    """
-    Displace selected atoms in alternating directions (dimerisation):
-    pairing along `dimer_direction`, displacing along `displacement_direction`.
+# def dimerise_displacement(
+#     labeled_positions_frac,
+#     lattice_cart,
+#     dimer_direction,
+#     displacement_direction,
+#     displacement=0.5,
+#     start_phase='+',
+#     alternate=False,
+#     wrap_axes=(1,1,1)
+# ):
+#     """
+#     Displace selected atoms in alternating directions (dimerisation):
+#     pairing along `dimer_direction`, displacing along `displacement_direction`.
 
-    Parameters
-    ----------
-    labeled_positions_frac : sequence of [idx, flag, sym, fx, fy, fz]
-        Input atoms; only those with flag=True are processed.
-    lattice_cart : (3,3) array-like
-        Cartesian cell vectors (rows), used to convert Angstrom to fractional.
-    dimer_direction : {'x','y','z'}
-        Axis along which atoms are paired (chains formed by identical values
-        of the other two fractional coords).
-    displacement_direction : {'x','y','z'}
-        Axis along which to apply alternating displacement.
-    displacement : float, optional
-        Cartesian displacement magnitude in Angstrom (default=0.5).
-    start_phase : {'+','-'}, optional
-        Sign of the first displacement in the first chain (default='+').
-    alternate : bool, optional
-        If True, flip the start_phase for each new chain in order (default=False).
-    wrap_axes : length-3 sequence of 0/1, optional
-        Axes where periodic wrapping should apply (default=(1,1,1)).
+#     Parameters
+#     ----------
+#     labeled_positions_frac : sequence of [idx, flag, sym, fx, fy, fz]
+#         Input atoms; only those with flag=True are processed.
+#     lattice_cart : (3,3) array-like
+#         Cartesian cell vectors (rows), used to convert Angstrom to fractional.
+#     dimer_direction : {'x','y','z'}
+#         Axis along which atoms are paired (chains formed by identical values
+#         of the other two fractional coords).
+#     displacement_direction : {'x','y','z'}
+#         Axis along which to apply alternating displacement.
+#     displacement : float, optional
+#         Cartesian displacement magnitude in Angstrom (default=0.5).
+#     start_phase : {'+','-'}, optional
+#         Sign of the first displacement in the first chain (default='+').
+#     alternate : bool, optional
+#         If True, flip the start_phase for each new chain in order (default=False).
+#     wrap_axes : length-3 sequence of 0/1, optional
+#         Axes where periodic wrapping should apply (default=(1,1,1)).
 
-    Returns
-    -------
-    positions_frac : ndarray of shape (N, 4), dtype=object
-        Array of [symbol, fx, fy, fz] with updated fractional positions.
+#     Returns
+#     -------
+#     positions_frac : ndarray of shape (N, 4), dtype=object
+#         Array of [symbol, fx, fy, fz] with updated fractional positions.
 
-    Raises
-    ------
-    ValueError
-        If any chain has an odd number of atoms or invalid directions.
-    """
-    # Map directions to indices
-    axes = {'x':0, 'y':1, 'z':2}
-    if dimer_direction not in axes or displacement_direction not in axes:
-        raise ValueError("`dimer_direction` and `displacement_direction` must be one of 'x','y','z'.")
-    dimer_ax = axes[dimer_direction]
-    disp_ax  = axes[displacement_direction]
+#     Raises
+#     ------
+#     ValueError
+#         If any chain has an odd number of atoms or invalid directions.
+#     """
+#     # Map directions to indices
+#     axes = {'x':0, 'y':1, 'z':2}
+#     if dimer_direction not in axes or displacement_direction not in axes:
+#         raise ValueError("`dimer_direction` and `displacement_direction` must be one of 'x','y','z'.")
+#     dimer_ax = axes[dimer_direction]
+#     disp_ax  = axes[displacement_direction]
 
-    # Convert displacement (Å) to fractional along disp_ax
-    disp_vec = np.zeros(3, dtype=float)
-    disp_vec[disp_ax] = displacement
-    inv_lat = np.linalg.inv(lattice_cart)
-    disp_frac = disp_vec @ inv_lat
+#     # Convert displacement (Å) to fractional along disp_ax
+#     disp_vec = np.zeros(3, dtype=float)
+#     disp_vec[disp_ax] = displacement
+#     inv_lat = np.linalg.inv(lattice_cart)
+#     disp_frac = disp_vec @ inv_lat
 
-    # Prepare atom data
-    atoms = []
-    for idx, flag, sym, fx, fy, fz in labeled_positions_frac:
-        atoms.append({'flag': flag,
-                      'sym': sym,
-                      'coord': np.array([fx,fy,fz], float)})
+#     # Prepare atom data
+#     atoms = []
+#     for idx, flag, sym, fx, fy, fz in labeled_positions_frac:
+#         atoms.append({'flag': flag,
+#                       'sym': sym,
+#                       'coord': np.array([fx,fy,fz], float)})
 
-    # Group flagged atoms by the other two coords
-    groups = {}
-    for atom in atoms:
-        if not atom['flag']:
-            continue
-        key = tuple(np.delete(atom['coord'], dimer_ax))
-        groups.setdefault(key, []).append(atom)
+#     # Group flagged atoms by the other two coords
+#     groups = {}
+#     for atom in atoms:
+#         if not atom['flag']:
+#             continue
+#         key = tuple(np.delete(atom['coord'], dimer_ax))
+#         groups.setdefault(key, []).append(atom)
 
-    # Check even sizes and apply alternating displacements
-    # Sort groups by key for consistent ordering
-    sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
-    for idx, (key, grp) in enumerate(sorted_items):
-        if len(grp) % 2 != 0:
-            raise ValueError(f"Chain at {key} has odd number of atoms ({len(grp)})")
-        # Determine phase for this chain
-        phase = start_phase
-        if alternate and (idx % 2 == 1):
-            phase = '+' if start_phase == '-' else '-'
-        sign = 1 if phase == '+' else -1
-        # Sort along dimer axis and apply
-        grp.sort(key=lambda a: a['coord'][dimer_ax])
-        for atom in grp:
-            atom['coord'][disp_ax] += sign * disp_frac[disp_ax]
-            sign *= -1
+#     # Check even sizes and apply alternating displacements
+#     # Sort groups by key for consistent ordering
+#     sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
+#     for idx, (key, grp) in enumerate(sorted_items):
+#         if len(grp) % 2 != 0:
+#             raise ValueError(f"Chain at {key} has odd number of atoms ({len(grp)})")
+#         # Determine phase for this chain
+#         phase = start_phase
+#         if alternate and (idx % 2 == 1):
+#             phase = '+' if start_phase == '-' else '-'
+#         sign = 1 if phase == '+' else -1
+#         # Sort along dimer axis and apply
+#         grp.sort(key=lambda a: a['coord'][dimer_ax])
+#         for atom in grp:
+#             atom['coord'][disp_ax] += sign * disp_frac[disp_ax]
+#             sign *= -1
 
-    # Build output with wrapping/clamping
-    wrap = np.array(wrap_axes, int)
-    out = []
-    for atom in atoms:
-        c = atom['coord']
-        for i in range(3):
-            if wrap[i]:
-                c[i] %= 1.0
-            else:
-                c[i] = min(max(c[i], 0.0), 1.0)
-        out.append([atom['sym'], float(c[0]), float(c[1]), float(c[2])])
+#     # Build output with wrapping/clamping
+#     wrap = np.array(wrap_axes, int)
+#     out = []
+#     for atom in atoms:
+#         c = atom['coord']
+#         for i in range(3):
+#             if wrap[i]:
+#                 c[i] %= 1.0
+#             else:
+#                 c[i] = min(max(c[i], 0.0), 1.0)
+#         out.append([atom['sym'], float(c[0]), float(c[1]), float(c[2])])
 
-    return np.array(out, dtype=object)
+#     return np.array(out, dtype=object)
 
 
 def create_vacuum_spacing(
@@ -1629,96 +1627,167 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
     return np.array(output, dtype=object)
 
 
-def select_atoms_by_plane(positions_frac, lattice_cart, axis, ref_value,
-                          tolerance=0.0, include=None, exclude=None):
+# def select_atoms_by_plane(positions_frac, lattice_cart, axis, ref_value,
+#                           tolerance=0.0, include=None, exclude=None):
+#     """
+#     Select atoms near a specific plane perpendicular to a given axis.
+
+#     Parameters
+#     ----------
+#     positions_frac : array-like, shape (N, 4)
+#         Rows of [element_symbol, frac_x, frac_y, frac_z].
+#     lattice_cart : array-like, shape (3, 3)
+#         Cartesian lattice vectors (rows are unit cell vectors in Å).
+#     axis : {'x', 'y', 'z'}
+#         Axis perpendicular to the plane (e.g. 'z' selects x-y planes).
+#     ref_value : float or numeric string
+#         Cartesian coordinate along the given axis in Å defining the plane.
+#     tolerance : float or numeric string, optional
+#         Distance tolerance in Å (default=0.0). Atoms with |coord - ref_value| <= tolerance are selected.
+#     include : list of int, range, slice, or tuple, optional
+#         Atom indices (1-based) to force include.
+#     exclude : list of int, range, slice, or tuple, optional
+#         Atom indices to force exclude.
+
+#     Returns
+#     -------
+#     result : list of lists, shape (N, 6)
+#         Each entry: [index (1-based), is_selected (bool), element_symbol,
+#                      frac_x, frac_y, frac_z].
+#     """
+#     # Parse arrays
+#     arr = np.array(positions_frac, dtype=object)
+#     symbols = arr[:, 0]
+#     frac = arr[:, 1:].astype(float)
+#     lattice = np.array(lattice_cart, dtype=float)
+
+#     # Build include/exclude index sets (0-based)
+#     def build_index_set(spec):
+#         s = set()
+#         for item in spec or []:
+#             if isinstance(item, int):
+#                 s.add(item - 1)
+#             elif isinstance(item, range):
+#                 s.update(i - 1 for i in item)
+#             elif isinstance(item, slice):
+#                 start = item.start or 1
+#                 stop = item.stop or len(arr)
+#                 s.update(i for i in range(start - 1, stop))
+#             elif isinstance(item, tuple) and len(item) == 2:
+#                 start, end = item
+#                 s.update(i - 1 for i in range(start, end + 1))
+#             else:
+#                 raise ValueError(f"Invalid index specifier: {item}")
+#         return s
+
+#     include_set = build_index_set(include)
+#     exclude_set = build_index_set(exclude)
+
+#     # Convert fractional to Cartesian coordinates
+#     cart = frac.dot(lattice)
+
+#     # Map axis to column
+#     axis_map = {'x': 0, 'y': 1, 'z': 2}
+#     try:
+#         ai = axis_map[axis.lower()]
+#     except KeyError:
+#         raise ValueError("Axis must be one of 'x', 'y', or 'z'")
+
+#     # Reference and tolerance as floats
+#     try:
+#         ref = float(ref_value)
+#         tol = float(tolerance)
+#     except Exception:
+#         raise ValueError("ref_value and tolerance must be numeric or numeric strings.")
+
+#     # Compute mask for numeric criteria
+#     coords = cart[:, ai]
+#     mask = np.abs(coords - ref) <= tol
+
+#     # Build result list
+#     result = []
+#     for idx, (atom, fcoords) in enumerate(zip(symbols, frac)):
+#         if idx in exclude_set:
+#             sel = False
+#         elif idx in include_set:
+#             sel = True
+#         else:
+#             sel = bool(mask[idx])
+#         result.append([idx + 1, sel, atom,
+#                        float(fcoords[0]), float(fcoords[1]), float(fcoords[2])])
+
+#     return result
+
+
+def extract_plane_lattice_vectors(
+    labelled_positions_frac,
+    lattice_cart
+):
     """
-    Select atoms near a specific plane perpendicular to a given axis.
+    Determine two independent translational lattice vectors lying in the plane
+    defined by a set of selected atoms.
 
     Parameters
     ----------
-    positions_frac : array-like, shape (N, 4)
-        Rows of [element_symbol, frac_x, frac_y, frac_z].
-    lattice_cart : array-like, shape (3, 3)
-        Cartesian lattice vectors (rows are unit cell vectors in Å).
-    axis : {'x', 'y', 'z'}
-        Axis perpendicular to the plane (e.g. 'z' selects x-y planes).
-    ref_value : float or numeric string
-        Cartesian coordinate along the given axis in Å defining the plane.
-    tolerance : float or numeric string, optional
-        Distance tolerance in Å (default=0.0). Atoms with |coord - ref_value| <= tolerance are selected.
-    include : list of int, range, slice, or tuple, optional
-        Atom indices (1-based) to force include.
-    exclude : list of int, range, slice, or tuple, optional
-        Atom indices to force exclude.
+    labelled_positions_frac : array-like of shape (M, 7)
+        Rows of [index, is_selected, element_symbol, frac_x, frac_y, frac_z, distance]
+        as returned by `select_atoms_by_plane`.
+    lattice_cart : array-like of shape (3, 3)
+        Cartesian lattice vectors (rows are a, b, c vectors).
 
     Returns
     -------
-    result : list of lists, shape (N, 6)
-        Each entry: [index (1-based), is_selected (bool), element_symbol,
-                     frac_x, frac_y, frac_z].
+    v1_cart, v2_cart : ndarray, shape (3,)
+        Two independent Cartesian translation vectors that span the plane defined
+        by the selected atoms.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two atoms are selected or if two independent vectors cannot
+        be found among the selected atoms.
     """
-    # Parse arrays
-    arr = np.array(positions_frac, dtype=object)
-    symbols = arr[:, 0]
-    frac = arr[:, 1:].astype(float)
-    lattice = np.array(lattice_cart, dtype=float)
+    arr = np.asarray(labelled_positions_frac, dtype=object)
+    # Filter only selected atoms (is_selected == True)
+    sel_mask = arr[:, 1].astype(bool)
+    fracs = arr[sel_mask, 3:6].astype(float)
 
-    # Build include/exclude index sets (0-based)
-    def build_index_set(spec):
-        s = set()
-        for item in spec or []:
-            if isinstance(item, int):
-                s.add(item - 1)
-            elif isinstance(item, range):
-                s.update(i - 1 for i in item)
-            elif isinstance(item, slice):
-                start = item.start or 1
-                stop = item.stop or len(arr)
-                s.update(i for i in range(start - 1, stop))
-            elif isinstance(item, tuple) and len(item) == 2:
-                start, end = item
-                s.update(i - 1 for i in range(start, end + 1))
-            else:
-                raise ValueError(f"Invalid index specifier: {item}")
-        return s
+    if fracs.shape[0] < 2:
+        raise ValueError("Need at least two selected atoms to define plane vectors.")
 
-    include_set = build_index_set(include)
-    exclude_set = build_index_set(exclude)
+    lattice = np.asarray(lattice_cart, dtype=float)
 
-    # Convert fractional to Cartesian coordinates
-    cart = frac.dot(lattice)
+    # Compute fractional differences with periodic wrapping
+    deltas = []
+    M = len(fracs)
+    for i in range(M):
+        for j in range(i+1, M):
+            diff = fracs[j] - fracs[i]
+            # wrap into [-0.5, +0.5]
+            wrapped = diff - np.round(diff)
+            if np.linalg.norm(wrapped) > 1e-8:
+                deltas.append(wrapped)
+    if not deltas:
+        raise ValueError("No non-zero vector differences found among selected atoms.")
+    deltas = np.array(deltas)
 
-    # Map axis to column
-    axis_map = {'x': 0, 'y': 1, 'z': 2}
-    try:
-        ai = axis_map[axis.lower()]
-    except KeyError:
-        raise ValueError("Axis must be one of 'x', 'y', or 'z'")
+    # Sort differences by length and pick two independent vectors
+    lengths = np.linalg.norm(deltas, axis=1)
+    idx = np.argsort(lengths)
+    deltas = deltas[idx]
 
-    # Reference and tolerance as floats
-    try:
-        ref = float(ref_value)
-        tol = float(tolerance)
-    except Exception:
-        raise ValueError("ref_value and tolerance must be numeric or numeric strings.")
+    v_frac1 = deltas[0]
+    for vec in deltas[1:]:
+        if np.linalg.norm(np.cross(v_frac1, vec)) > 1e-6:
+            v_frac2 = vec
+            break
+    else:
+        raise ValueError("Unable to find two independent vectors in the plane.")
 
-    # Compute mask for numeric criteria
-    coords = cart[:, ai]
-    mask = np.abs(coords - ref) <= tol
-
-    # Build result list
-    result = []
-    for idx, (atom, fcoords) in enumerate(zip(symbols, frac)):
-        if idx in exclude_set:
-            sel = False
-        elif idx in include_set:
-            sel = True
-        else:
-            sel = bool(mask[idx])
-        result.append([idx + 1, sel, atom,
-                       float(fcoords[0]), float(fcoords[1]), float(fcoords[2])])
-
-    return result
+    # Convert fractional to Cartesian
+    v1_cart = v_frac1.dot(lattice)
+    v2_cart = v_frac2.dot(lattice)
+    return v1_cart, v2_cart
 
 
 def find_plane_value(positions_frac, lattice_cart, axis, criteria):
