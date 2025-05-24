@@ -1057,6 +1057,52 @@ def write_param_file(
 
     return outfile
 
+
+def write_xyz(positions_cart, path='.', filename='castep_input', comment=None):
+    """
+    Write a .xyz file from an array of symbols and Cartesian coordinates.
+
+    Parameters
+    ----------
+    positions_cart : array-like, shape (N,4)
+        Array of N atomic positions: each row is [element_symbol, x, y, z].
+    path : str, optional
+        Directory where the .xyz file will be written (default: current directory).
+    filename : str, optional
+        Base name for the output file (default: "castep_input").
+    comment : str, optional
+        Comment line in the .xyz file (default: blank).
+
+    Returns
+    -------
+    xyz_str : str
+        The contents of the generated .xyz file.
+    """
+    positions_cart = np.asarray(positions_cart, dtype=object)
+    n = len(positions_cart)
+
+    # Prepare output path
+    out_fname = filename if filename.lower().endswith('.xyz') else filename + '.xyz'
+    out_path = os.path.join(path, out_fname)
+
+    # Header
+    lines = [str(n), comment or '']
+
+    # Atom lines
+    for row in positions_cart:
+        symbol = row[0]
+        x, y, z = map(float, row[1:])
+        lines.append(f"{symbol} {x:.6f} {y:.6f} {z:.6f}")
+
+    xyz_str = "\n".join(lines) + "\n"
+
+    # Write to disk
+    with open(out_path, 'w') as f:
+        f.write(xyz_str)
+
+    return xyz_str
+
+
 # ============================================================================
 #  Manipulate coordinates and cells
 # ============================================================================
@@ -1472,6 +1518,38 @@ def sort_positions_frac(arr: np.ndarray,
     # Sort and return; reverse if descending
     rows_sorted = sorted(rows, key=sort_key, reverse=descending)
     return np.array(rows_sorted, dtype=object)
+
+
+def frac_to_cart(lattice_cart, positions_frac):
+    """
+    Convert fractional coordinate array to Cartesian coordinate array.
+
+    Parameters
+    ----------
+    lattice_cart : array-like, shape (3,3)
+        Lattice vectors in Cartesian coordinates (rows are a, b, c vectors).
+    positions_frac : array-like, shape (N,4)
+        Array of N atomic positions: each row is [element_symbol, f_x, f_y, f_z].
+        The first column must be element symbols (strings), the next three columns are fractional coords.
+
+    Returns
+    -------
+    positions_cart : ndarray, shape (N,4), dtype object
+        Array with the same structure as `positions_frac`, but with Cartesian coordinates in columns 1–3.
+    """
+    lattice_cart = np.asarray(lattice_cart, dtype=float)
+    positions_frac = np.asarray(positions_frac, dtype=object)
+
+    n = len(positions_frac)
+    positions_cart = np.empty((n, 4), dtype=object)
+    for i, row in enumerate(positions_frac):
+        symbol = row[0]
+        frac = np.array(row[1:], dtype=float)
+        cart = frac.dot(lattice_cart)
+        positions_cart[i, 0] = symbol
+        positions_cart[i, 1:] = cart
+
+    return positions_cart
 
 
 def select_atoms_by_region(positions_frac, lattice_cart, condition,
