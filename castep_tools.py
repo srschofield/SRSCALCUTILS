@@ -642,6 +642,7 @@ def fractional_coords_from_castep(castep_path):
     
     return atoms 
 
+
 # ============================================================================
 #  Plotting and viewing functions
 # ============================================================================
@@ -1115,6 +1116,152 @@ def create_supercell_from_fractional_coords(
     lattice_cart = (lattice_cart.T * n).T
 
     return supercell_frac, lattice_cart
+
+
+def bond_vector_from_spherical(theta, phi, bondlength, tol=1e-8):
+    """
+    Convert spherical coordinates (physicist’s convention) to a 3D Cartesian bond vector,
+    and zero out any component smaller than `tol`.
+
+    Parameters
+    ----------
+    theta : float
+        Polar angle in radians, from +z toward the xy-plane.  Range: 0 ≤ θ ≤ π.
+    phi : float
+        Azimuthal angle in radians, from +x toward +y.  Range: 0 ≤ φ < 2π.
+    bondlength : float
+        Radial distance (bond length), r ≥ 0.
+    tol : float, optional
+        Any |component| < tol will be set to exactly 0.0  (default = 1e-8).
+
+    Returns
+    -------
+    bond : ndarray of shape (3,)
+        Cartesian vector [x, y, z], where
+            x = r * sin(theta) * cos(phi)
+            y = r * sin(theta) * sin(phi)
+            z = r * cos(theta)
+        and any tiny numerical remnant smaller than `tol` is snapped to zero.
+    """
+    r = float(bondlength)
+    sin_t = np.sin(theta)
+    x = r * sin_t * np.cos(phi)
+    y = r * sin_t * np.sin(phi)
+    z = r * np.cos(theta)
+
+    # snap near-zero values to exactly 0.0
+    x = 0.0 if abs(x) < tol else x
+    y = 0.0 if abs(y) < tol else y
+    z = 0.0 if abs(z) < tol else z
+
+    return np.array([x, y, z], dtype=float)
+
+
+import numpy as np
+
+def add_atoms_to_positions_frac(
+    labeled_positions_frac,
+    lattice_cart,
+    bond,
+    atom="H",
+    extend_unit_cell=(0, 0, 1)
+):
+    """
+    Append offset atoms to a fractional-coordinate list, handling either a single bond vector
+    or a list of bond vectors, with optional cell extension and periodic wrap.
+
+    Parameters
+    ----------
+    labeled_positions_frac : sequence of [idx, flag, sym, fx, fy, fz]
+        Original atoms with boolean flag for adding offsets.
+    lattice_cart : (3,3) array-like
+        Cartesian cell vectors (rows).
+    bond : array-like, shape (3,) or (M,3)
+        If shape (3,), a single offset vector. If shape (M,3), a list of M offset vectors.
+    atom : str, optional
+        Symbol for each new atom (default "H").
+    extend_unit_cell : length-3 sequence of 0/1, optional
+        Which axes to allow cell expansion on. E.g. (0,0,1) means only z may extend,
+        (1,1,1) means x,y,z all may extend. Default (0,0,1).
+
+    Returns
+    -------
+    positions_frac : ndarray, shape (N + M*K, 4), dtype=object
+        Columns: [symbol, fx, fy, fz], all Python floats. K = # flagged atoms,
+        M = # bond vectors (or 1).
+    new_lattice_cart : ndarray (3,3)
+        Cell vectors expanded only along permitted axes.
+    """
+    # 1) prepare bond vectors & fractional offsets
+    bonds = np.atleast_2d(bond).astype(float)     # shape (M,3)
+    inv_lat = np.linalg.inv(lattice_cart)
+    bond_fracs = bonds @ inv_lat                 # shape (M,3)
+
+    # 2) collect originals and all prospective new positions
+    orig = []
+    new_fracs = []
+    for idx, flag, sym, fx, fy, fz in labeled_positions_frac:
+        f = np.array([fx, fy, fz], float)
+        orig.append((sym, f))
+        if flag:
+            for bf in bond_fracs:
+                new_fracs.append(f + bf)
+    new_fracs = np.vstack(new_fracs) if new_fracs else np.zeros((0,3))
+
+    # 3) compute minimal fractional shift Δ to bring new_fracs into [0,1]
+    low  = np.maximum(0.0, -new_fracs.min(axis=0))
+    high = np.maximum(0.0,  new_fracs.max(axis=0) - 1.0)
+    shift_frac = low - high
+
+    # 4) mask shifts by allowed axes
+    extend_axes = np.array(extend_unit_cell, dtype=int)
+    shift_frac = shift_frac * extend_axes
+
+    # 5) build output positions
+    stretch = 1.0 + np.abs(shift_frac)
+    out = []
+
+    # 5a) Originals: shift & normalize (they stay inside [0,1])
+    for sym, f in orig:
+        f_final = (f + shift_frac) / stretch
+        out.append([
+            sym,
+            float(f_final[0]),
+            float(f_final[1]),
+            float(f_final[2])
+        ])
+
+    # 5b) New atoms: shift, then clamp or wrap per axis, then normalize
+    for f in new_fracs:
+        f2 = f + shift_frac
+        # per-axis clamp or wrap
+        for i in range(3):
+            if extend_axes[i]:
+                # clamp into [0,1]
+                f2[i] = min(max(f2[i], 0.0), 1.0)
+            else:
+                # periodic wrap
+                f2[i] = f2[i] % 1.0
+        f_final = f2 / stretch
+        out.append([
+            atom,
+            float(f_final[0]),
+            float(f_final[1]),
+            float(f_final[2])
+        ])
+
+    positions_frac = np.array(out, dtype=object)
+
+    # 6) expand the allowed cell vectors by |shift_frac|
+    new_lattice_cart = lattice_cart.copy()
+    for i in range(3):
+        if extend_axes[i]:
+            vec = lattice_cart[i]
+            new_lattice_cart[i] = vec * (1.0 + abs(shift_frac[i]))
+
+    return positions_frac, new_lattice_cart
+
+
 
 
 def create_vacuum_spacing(
