@@ -32,7 +32,7 @@ from IPython.display import display, Image as StaticImage
 import time
 
 # ============================================================================
-# Basic file io
+# Basic file io and handling
 # ============================================================================
 def find_all_files_by_extension(root_dir, extension=".castep"):
     """
@@ -49,6 +49,44 @@ def find_all_files_by_extension(root_dir, extension=".castep"):
     if not extension.startswith("."):
         extension = "." + extension
     return list(root.rglob(f"*{extension}"))
+
+
+def delete_all_files_in_cwd(force: bool = False):
+    cwd = Path('.').resolve()
+    files = [f for f in cwd.iterdir() if f.is_file()]
+    if not files:
+        print(f"No files found in {cwd}. Nothing to delete.")
+        return
+
+    # If not forcing, show and prompt
+    if not force:
+        print(f"Found {len(files)} file(s) in {cwd}:")
+        for f in files:
+            print(f"  • {f.name}")
+
+        confirm = input("Delete ALL these files? [y/N]: ").strip().lower()
+        if confirm != 'y':
+            print("Aborted. No files were deleted.")
+            return
+
+    # Proceed with deletion (forced or user-confirmed)
+    deleted = 0
+    for entry in files:
+        try:
+            entry.unlink()
+            deleted += 1
+        except Exception as e:
+            print(f"Error deleting {entry.name}: {e}")
+
+    print(f"Done. {deleted} file(s) deleted.")
+
+
+def show_only_true(data):
+    """
+    Return only those rows from `data` (a list of rows) 
+    where at least one element is the boolean True.
+    """
+    return [row for row in data if any(cell is True for cell in row)]
 
 
 # ============================================================================
@@ -1625,6 +1663,78 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
         output.append([idx+1, is_sel, atom, *py_fracs])
 
     return np.array(output, dtype=object)
+
+
+def select_atoms_by_plane(
+    positions_frac,
+    lattice_cart,
+    plane,
+    reference_position,
+    tolerance=0.1
+):
+    """
+    Select atoms lying within a slab around a specified plane.
+
+    Parameters
+    ----------
+    positions_frac : array-like of shape (N, 4)
+        Rows of [element_symbol, frac_x, frac_y, frac_z].
+    lattice_cart : array-like of shape (3, 3)
+        Cartesian cell vectors (each row is a lattice vector in Å).
+    plane : array-like of length 3
+        Normal vector (in Cartesian coordinates) defining the plane.
+    reference_position : array-like of length 3
+        A point (in Cartesian coordinates) known to lie on the plane.
+    tolerance : float, optional
+        Distance tolerance in Å. Atoms whose perpendicular distance to the plane
+        is ≤ tolerance are selected (default = 0.0).
+
+    Returns
+    -------
+    result : list of lists, shape (M, 6)
+        Each entry corresponds to one atom and contains:
+        [index (1-based), is_selected (bool), element_symbol,
+         frac_x, frac_y, frac_z, distance]
+        where `distance` is the signed perpendicular distance (Å) from the atom
+        to the plane (positive on the side of the normal vector).
+    """
+    # Convert inputs
+    arr = np.array(positions_frac, dtype=object)
+    symbols = arr[:, 0]
+    frac = arr[:, 1:].astype(float)
+    lattice = np.array(lattice_cart, dtype=float)
+
+    # Compute Cartesian positions of atoms
+    cart = frac.dot(lattice)
+
+    # Plane normal and reference point
+    normal = np.array(plane, dtype=float)
+    if np.allclose(normal, 0):
+        raise ValueError("Plane normal vector must be nonzero.")
+    # unit normal
+    n_unit = normal / np.linalg.norm(normal)
+    ref_pt = np.array(reference_position, dtype=float)
+
+    # Compute signed distances
+    # For each atom: d = dot(r_i - ref_pt, n_unit)
+    deltas = cart - ref_pt
+    dists = deltas.dot(n_unit)
+
+    # Build result list
+    result = []
+    for i, (sym, fcoord, dist) in enumerate(zip(symbols, frac, dists)):
+        sel = abs(dist) <= tolerance
+        result.append([
+            i + 1,
+            bool(sel),
+            sym,
+            float(fcoord[0]),
+            float(fcoord[1]),
+            float(fcoord[2]),
+            float(dist)
+        ])
+
+    return result
 
 
 # def select_atoms_by_plane(positions_frac, lattice_cart, axis, ref_value,
