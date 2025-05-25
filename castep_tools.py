@@ -1850,7 +1850,7 @@ def select_atom_by_number(positions_frac, lattice_cart, atom_number, element=Non
     return tuple(sel_frac), tuple(sel_cart)
 
 
-def replace_if_true(data, find, replace):
+def selected_replace(data, find, replace, return_labelled=False):
     """
     For each row in `data` (list of lists), if the row contains the boolean True,
     return a new row where every element equal to `find` is replaced by `replace`.
@@ -1865,6 +1865,22 @@ def replace_if_true(data, find, replace):
             # Leave the row as-is
             new_row = list(row)
         result.append(new_row)
+    
+    if not return_labelled:
+        result = labelled_positions_frac_to_positions_frac(result)
+
+    return result
+    return result
+
+def selected_delete(data, return_labelled=False):
+    """
+    Return a new list of rows, omitting any row that contains the boolean True.
+    """
+    result = [row for row in data if not any(cell is True for cell in row)]
+
+    if not return_labelled:
+        result = labelled_positions_frac_to_positions_frac(result)
+
     return result
 
 
