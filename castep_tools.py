@@ -1753,8 +1753,7 @@ def select_atoms_by_plane(
             sym,
             float(fcoord[0]),
             float(fcoord[1]),
-            float(fcoord[2]),
-            float(dist)
+            float(fcoord[2])
         ])
 
     return result
@@ -1764,33 +1763,91 @@ def select_atom_by_conditions(positions_frac, lattice_cart, criteria,
                               order=('z','y','x')):
     """
     Sequentially filter by (min|max) on axes in `order`, but if exactly one
-    atom remains, return it as a 1D array instead of a 2D (1×4) array.
+    atom remains, return:
+      - sel_frac:   1D array [species, fx, fy, fz]
+      - sel_cart:   tuple (species, cx, cy, cz)
+    Otherwise:
+      - sel_frac:   2D object-array shape (M,4)
+      - sel_cart:   2D object-array shape (M,4) with species + Cartesian coords
     """
     arr = np.asarray(positions_frac, dtype=object)
     frac = arr[:, 1:].astype(float)
 
-    axis_map = {'x': 0, 'y': 1, 'z': 2}
+    axis_map = {'x':0, 'y':1, 'z':2}
     idxs = np.arange(len(frac))
 
     for axis in order:
         i = axis_map[axis]
         crit = criteria[i]
-        values = frac[idxs, i]
-        target = values.min() if crit == 'min' else values.max()
-        idxs = idxs[values == target]
+        vals = frac[idxs, i]
+        target = vals.min() if crit=='min' else vals.max()
+        idxs = idxs[vals == target]
         if len(idxs) == 1:
             break
 
-    # slice out results
+    # fractional selection (unchanged)
     sel_frac = arr[idxs]
-    sel_cart = frac[idxs] @ np.asarray(lattice_cart, dtype=float)
+
+    # compute Cartesian coords
+    cart_coords = frac[idxs] @ np.asarray(lattice_cart, dtype=float)
+    # species labels
+    labels = arr[idxs, 0]
+
+    # build labeled Cartesian array
+    # cast coords to object so we can hstack with strings
+    cart_obj = cart_coords.astype(object)
+    sel_cart = np.hstack((labels.reshape(-1,1), cart_obj))
 
     # unwrap if single
     if sel_frac.shape[0] == 1:
-        sel_frac = sel_frac[0]       # shape (4,)
-        sel_cart = sel_cart[0]       # shape (3,)
+        sel_frac = sel_frac[0]                    # 1D: [species, fx, fy, fz]
+        # turn the single 1×4 array into a tuple (species, cx, cy, cz)
+        sel_cart = tuple(sel_cart[0])
 
     return sel_frac, sel_cart
+
+
+def select_atom_by_number(positions_frac, lattice_cart, atom_number, element=None):
+    """
+    Select the atom at position `atom_number` in positions_frac (1-based),
+    optionally filtering by element, and return both fractional and Cartesian
+    coords—each prefixed by the atom type.
+
+    Returns
+    -------
+    sel_frac : np.ndarray, shape (4,), dtype object
+        [symbol, frac_x, frac_y, frac_z]
+    sel_cart : np.ndarray, shape (4,), dtype object
+        [symbol, cart_x, cart_y, cart_z]
+    """
+    # Convert to object array
+    arr = np.asarray(positions_frac, dtype=object)
+    # Optionally filter by element type
+    if element is not None:
+        mask = arr[:, 0] == element
+        filtered = arr[mask]
+    else:
+        filtered = arr
+
+    N = len(filtered)
+    if not (1 <= atom_number <= N):
+        raise IndexError(f"atom_number {atom_number} out of range (1–{N})"
+                         + (f" for element='{element}'" if element else ""))
+
+    # Pick the requested row
+    row = filtered[atom_number - 1]      # object array [sym, fx, fy, fz]
+    symbol = row[0]
+    frac_coords = row[1:].astype(float)  # [fx, fy, fz]
+
+    # Compute Cartesian coords
+    lattice = np.asarray(lattice_cart, dtype=float)
+    cart_coords = frac_coords @ lattice  # [cx, cy, cz]
+
+    # Build the outputs, as object arrays of length 4
+    sel_frac = np.hstack(([symbol], frac_coords)).astype(object)
+    sel_cart = np.hstack(([symbol], cart_coords)).astype(object)
+
+    return tuple(sel_frac), tuple(sel_cart)
 
 
 def replace_if_true(data, find, replace):
