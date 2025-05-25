@@ -27,6 +27,7 @@ import math
 from ase import Atoms
 import nglview as nv        # pip install nglview
 from collections import defaultdict
+from typing import List, Union, Tuple
 
 from IPython.display import display, Image as StaticImage
 import time
@@ -1850,73 +1851,7 @@ def select_atom_by_number(positions_frac, lattice_cart, atom_number, element=Non
     return tuple(sel_frac), tuple(sel_cart)
 
 
-def selected_toggle_by_periodicity(
-    selected_positions_frac,
-    n=(2,1,1),
-    p=(0,0,0)
-):
-    """
-    Toggle True→False in a periodic pattern over (x,y,z) as before,
-    then also return the inverse version—but only among atoms originally marked True.
-    Any row that starts False stays False in both outputs.
-
-    Returns
-    -------
-    out, out_inverse : np.ndarray of shape (N,6), dtype object
-        - out:           toggled version
-        - out_inverse:   inverse of out, but only for originally True rows
-    """
-    arr = np.asarray(selected_positions_frac, dtype=object)
-    orig_flags = arr[:,1].astype(bool)     # remember which were originally True
-    fx, fy, fz = (
-        arr[:,3].astype(float),
-        arr[:,4].astype(float),
-        arr[:,5].astype(float),
-    )
-
-    # Build integer grid indices for y,z to group slices
-    unique_y = np.unique(fy)
-    unique_z = np.unique(fz)
-    iy = np.searchsorted(unique_y, fy)
-    iz = np.searchsorted(unique_z, fz)
-
-    # Start with a copy and copy of flags
-    out = arr.copy()
-    out_flags = orig_flags.copy()
-
-    # For each (y,z) slice, only process rows originally True
-    for gy in range(len(unique_y)):
-        for gz in range(len(unique_z)):
-            mask_slice = (iy == gy) & (iz == gz) & orig_flags
-            if not np.any(mask_slice):
-                continue
-
-            idxs = np.where(mask_slice)[0]
-            order = np.argsort(fx[idxs])
-            sorted_idxs = idxs[order]
-
-            for j, row in enumerate(sorted_idxs):
-                tog = ((j - p[0]) % n[0] == 0)
-                if n[1] > 1 and ((gy - p[1]) % n[1] != 0):
-                    tog = not tog
-                if n[2] > 1 and ((gz - p[2]) % n[2] != 0):
-                    tog = not tog
-
-                if tog:
-                    out_flags[row] = False
-
-    # apply toggled flags
-    out[:,1] = out_flags.tolist()
-
-    # build inverse: only flip those that were originally True
-    inv_flags = orig_flags & (~out_flags)
-    out_inverse = arr.copy()
-    out_inverse[:,1] = inv_flags.tolist()
-
-    return out, out_inverse
-
-
-def selected_replace(data, find, replace, return_labelled=False):
+def selected_replace(data, element, replacewith, return_labelled=False):
     """
     For each row in `data` (list of lists), if the row contains the boolean True,
     return a new row where every element equal to `find` is replaced by `replace`.
@@ -1926,7 +1861,7 @@ def selected_replace(data, find, replace, return_labelled=False):
     for row in data:
         if any(cell is True for cell in row):
             # Replace matching entries in this row
-            new_row = [replace if cell == find else cell for cell in row]
+            new_row = [replacewith if cell == element else cell for cell in row]
         else:
             # Leave the row as-is
             new_row = list(row)
@@ -1936,7 +1871,7 @@ def selected_replace(data, find, replace, return_labelled=False):
         result = labelled_positions_frac_to_positions_frac(result)
 
     return result
-    return result
+
 
 def selected_delete(data, return_labelled=False):
     """
@@ -1948,6 +1883,84 @@ def selected_delete(data, return_labelled=False):
         result = labelled_positions_frac_to_positions_frac(result)
 
     return result
+
+
+def selected_toggle_plane_selection(labelled_positions_frac: List[List[Union[int, bool, str, float]]], 
+                            fast: str = 'x', 
+                            slow: str = 'y', 
+                            alternate: bool = False
+                           ) -> Tuple[List[List[Union[int, bool, str, float]]],
+                                       List[List[Union[int, bool, str, float]]]]:
+    """
+    Generate two selection patterns for atoms in a plane:
+
+    1. A toggled pattern along the fast axis (striped or checkerboard).
+    2. The inverse of that pattern, with originalFalse atoms always remaining False.
+
+    Parameters
+    ----------
+    labelled_positions_frac : List of [label, selected, element, x, y, z]
+    fast : 'x'|'y'|'z'  -- axis to scan fastest
+    slow : 'x'|'y'|'z'  -- axis to scan slowest (must differ from fast)
+    alternate : bool    -- if True, offset every other row (checkerboard), else stripes
+
+    Returns
+    -------
+    result1, result2
+      result1: list with toggled booleans for originally True atoms
+      result2: list with inverted pattern of result1; atoms originally False remain False
+    """
+    # Axis to index mapping
+    axis_map = {'x': 3, 'y': 4, 'z': 5}
+    if fast not in axis_map or slow not in axis_map:
+        raise ValueError("fast and slow must be one of 'x', 'y', or 'z'")
+    if fast == slow:
+        raise ValueError("fast and slow axes must differ")
+
+    # Deep copies of input for both outputs
+    result1 = [entry.copy() for entry in labelled_positions_frac]
+    result2 = [entry.copy() for entry in labelled_positions_frac]
+
+    # Collect indices and coords for originally True entries
+    slow_idx = axis_map[slow]
+    fast_idx = axis_map[fast]
+    selected = []  # (orig_idx, slow_val, fast_val)
+    for i, entry in enumerate(labelled_positions_frac):
+        if entry[1] is True:
+            selected.append((i, entry[slow_idx], entry[fast_idx]))
+
+    if not selected:
+        return result1, result2
+
+    # Group by slow-axis value
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for idx, s_val, f_val in selected:
+        groups[s_val].append((idx, f_val))
+
+    # Sort slow coords for scanning order
+    sorted_slow = sorted(groups.keys())
+
+    # Build toggled pattern in result1
+    for row_num, s_val in enumerate(sorted_slow):
+        line = groups[s_val]
+        # Sort along fast axis
+        line_sorted = sorted(line, key=lambda x: x[1])  # (idx, fast_val)
+        row_offset = row_num if alternate else 0
+        for j, (orig_idx, _) in enumerate(line_sorted):
+            if (j + row_offset) % 2 == 0:
+                result1[orig_idx][1] = not result1[orig_idx][1]
+
+    # Build inverse pattern in result2, but keep original False atoms False
+    for i, entry in enumerate(labelled_positions_frac):
+        if entry[1] is True:
+            # invert the toggled result
+            result2[i][1] = not result1[i][1]
+        else:
+            # ensure False remains False
+            result2[i][1] = False
+
+    return result1, result2
 
 
 def extract_plane_lattice_vectors(
