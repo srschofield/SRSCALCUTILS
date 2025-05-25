@@ -1850,6 +1850,72 @@ def select_atom_by_number(positions_frac, lattice_cart, atom_number, element=Non
     return tuple(sel_frac), tuple(sel_cart)
 
 
+def selected_toggle_by_periodicity(
+    selected_positions_frac,
+    n=(2,1,1),
+    p=(0,0,0)
+):
+    """
+    Toggle True→False in a periodic pattern over (x,y,z) as before,
+    then also return the inverse version—but only among atoms originally marked True.
+    Any row that starts False stays False in both outputs.
+
+    Returns
+    -------
+    out, out_inverse : np.ndarray of shape (N,6), dtype object
+        - out:           toggled version
+        - out_inverse:   inverse of out, but only for originally True rows
+    """
+    arr = np.asarray(selected_positions_frac, dtype=object)
+    orig_flags = arr[:,1].astype(bool)     # remember which were originally True
+    fx, fy, fz = (
+        arr[:,3].astype(float),
+        arr[:,4].astype(float),
+        arr[:,5].astype(float),
+    )
+
+    # Build integer grid indices for y,z to group slices
+    unique_y = np.unique(fy)
+    unique_z = np.unique(fz)
+    iy = np.searchsorted(unique_y, fy)
+    iz = np.searchsorted(unique_z, fz)
+
+    # Start with a copy and copy of flags
+    out = arr.copy()
+    out_flags = orig_flags.copy()
+
+    # For each (y,z) slice, only process rows originally True
+    for gy in range(len(unique_y)):
+        for gz in range(len(unique_z)):
+            mask_slice = (iy == gy) & (iz == gz) & orig_flags
+            if not np.any(mask_slice):
+                continue
+
+            idxs = np.where(mask_slice)[0]
+            order = np.argsort(fx[idxs])
+            sorted_idxs = idxs[order]
+
+            for j, row in enumerate(sorted_idxs):
+                tog = ((j - p[0]) % n[0] == 0)
+                if n[1] > 1 and ((gy - p[1]) % n[1] != 0):
+                    tog = not tog
+                if n[2] > 1 and ((gz - p[2]) % n[2] != 0):
+                    tog = not tog
+
+                if tog:
+                    out_flags[row] = False
+
+    # apply toggled flags
+    out[:,1] = out_flags.tolist()
+
+    # build inverse: only flip those that were originally True
+    inv_flags = orig_flags & (~out_flags)
+    out_inverse = arr.copy()
+    out_inverse[:,1] = inv_flags.tolist()
+
+    return out, out_inverse
+
+
 def selected_replace(data, find, replace, return_labelled=False):
     """
     For each row in `data` (list of lists), if the row contains the boolean True,
@@ -1882,98 +1948,6 @@ def selected_delete(data, return_labelled=False):
         result = labelled_positions_frac_to_positions_frac(result)
 
     return result
-
-
-# def select_atoms_by_plane(positions_frac, lattice_cart, axis, ref_value,
-#                           tolerance=0.0, include=None, exclude=None):
-#     """
-#     Select atoms near a specific plane perpendicular to a given axis.
-
-#     Parameters
-#     ----------
-#     positions_frac : array-like, shape (N, 4)
-#         Rows of [element_symbol, frac_x, frac_y, frac_z].
-#     lattice_cart : array-like, shape (3, 3)
-#         Cartesian lattice vectors (rows are unit cell vectors in Å).
-#     axis : {'x', 'y', 'z'}
-#         Axis perpendicular to the plane (e.g. 'z' selects x-y planes).
-#     ref_value : float or numeric string
-#         Cartesian coordinate along the given axis in Å defining the plane.
-#     tolerance : float or numeric string, optional
-#         Distance tolerance in Å (default=0.0). Atoms with |coord - ref_value| <= tolerance are selected.
-#     include : list of int, range, slice, or tuple, optional
-#         Atom indices (1-based) to force include.
-#     exclude : list of int, range, slice, or tuple, optional
-#         Atom indices to force exclude.
-
-#     Returns
-#     -------
-#     result : list of lists, shape (N, 6)
-#         Each entry: [index (1-based), is_selected (bool), element_symbol,
-#                      frac_x, frac_y, frac_z].
-#     """
-#     # Parse arrays
-#     arr = np.array(positions_frac, dtype=object)
-#     symbols = arr[:, 0]
-#     frac = arr[:, 1:].astype(float)
-#     lattice = np.array(lattice_cart, dtype=float)
-
-#     # Build include/exclude index sets (0-based)
-#     def build_index_set(spec):
-#         s = set()
-#         for item in spec or []:
-#             if isinstance(item, int):
-#                 s.add(item - 1)
-#             elif isinstance(item, range):
-#                 s.update(i - 1 for i in item)
-#             elif isinstance(item, slice):
-#                 start = item.start or 1
-#                 stop = item.stop or len(arr)
-#                 s.update(i for i in range(start - 1, stop))
-#             elif isinstance(item, tuple) and len(item) == 2:
-#                 start, end = item
-#                 s.update(i - 1 for i in range(start, end + 1))
-#             else:
-#                 raise ValueError(f"Invalid index specifier: {item}")
-#         return s
-
-#     include_set = build_index_set(include)
-#     exclude_set = build_index_set(exclude)
-
-#     # Convert fractional to Cartesian coordinates
-#     cart = frac.dot(lattice)
-
-#     # Map axis to column
-#     axis_map = {'x': 0, 'y': 1, 'z': 2}
-#     try:
-#         ai = axis_map[axis.lower()]
-#     except KeyError:
-#         raise ValueError("Axis must be one of 'x', 'y', or 'z'")
-
-#     # Reference and tolerance as floats
-#     try:
-#         ref = float(ref_value)
-#         tol = float(tolerance)
-#     except Exception:
-#         raise ValueError("ref_value and tolerance must be numeric or numeric strings.")
-
-#     # Compute mask for numeric criteria
-#     coords = cart[:, ai]
-#     mask = np.abs(coords - ref) <= tol
-
-#     # Build result list
-#     result = []
-#     for idx, (atom, fcoords) in enumerate(zip(symbols, frac)):
-#         if idx in exclude_set:
-#             sel = False
-#         elif idx in include_set:
-#             sel = True
-#         else:
-#             sel = bool(mask[idx])
-#         result.append([idx + 1, sel, atom,
-#                        float(fcoords[0]), float(fcoords[1]), float(fcoords[2])])
-
-#     return result
 
 
 def extract_plane_lattice_vectors(
