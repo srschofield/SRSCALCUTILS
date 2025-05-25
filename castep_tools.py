@@ -89,6 +89,29 @@ def show_only_true(data):
     return [row for row in data if any(cell is True for cell in row)]
 
 
+def labelled_positions_frac_to_positions_frac(labelled):
+    """
+    Given an array-like `labelled` where each row has two extra columns
+    on the left (e.g. an index and a boolean flag), return a new NumPy
+    array containing only the remaining columns (label + fractions).
+    
+    Example input rows:
+      [1, True, 'Si', 0.0,  0.0,  0.0]
+      [2, True, 'Si', 0.5,  0.0,  0.25]
+      ...
+    
+    Output rows:
+      ['Si', 0.0,  0.0,  0.0]
+      ['Si', 0.5,  0.0,  0.25]
+      ...
+    """
+    arr = np.asarray(labelled, dtype=object)
+    # slice off the first two columns
+    return arr[:, 2:]
+
+
+
+
 # ============================================================================
 #  General information
 # ============================================================================
@@ -1734,6 +1757,57 @@ def select_atoms_by_plane(
             float(dist)
         ])
 
+    return result
+
+
+def select_atom_by_conditions(positions_frac, lattice_cart, criteria,
+                              order=('z','y','x')):
+    """
+    Sequentially filter by (min|max) on axes in `order`, but if exactly one
+    atom remains, return it as a 1D array instead of a 2D (1×4) array.
+    """
+    arr = np.asarray(positions_frac, dtype=object)
+    frac = arr[:, 1:].astype(float)
+
+    axis_map = {'x': 0, 'y': 1, 'z': 2}
+    idxs = np.arange(len(frac))
+
+    for axis in order:
+        i = axis_map[axis]
+        crit = criteria[i]
+        values = frac[idxs, i]
+        target = values.min() if crit == 'min' else values.max()
+        idxs = idxs[values == target]
+        if len(idxs) == 1:
+            break
+
+    # slice out results
+    sel_frac = arr[idxs]
+    sel_cart = frac[idxs] @ np.asarray(lattice_cart, dtype=float)
+
+    # unwrap if single
+    if sel_frac.shape[0] == 1:
+        sel_frac = sel_frac[0]       # shape (4,)
+        sel_cart = sel_cart[0]       # shape (3,)
+
+    return sel_frac, sel_cart
+
+
+def replace_if_true(data, find, replace):
+    """
+    For each row in `data` (list of lists), if the row contains the boolean True,
+    return a new row where every element equal to `find` is replaced by `replace`.
+    Rows without True are left untouched.
+    """
+    result = []
+    for row in data:
+        if any(cell is True for cell in row):
+            # Replace matching entries in this row
+            new_row = [replace if cell == find else cell for cell in row]
+        else:
+            # Leave the row as-is
+            new_row = list(row)
+        result.append(new_row)
     return result
 
 
