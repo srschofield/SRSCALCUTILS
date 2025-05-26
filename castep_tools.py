@@ -2241,33 +2241,17 @@ def write_job_script(
     job_file = out_dir / f"{filename}.job"
 
     # Script content
-    content = f"""#!/bin/bash -f
-# Set your email address to get alerts
-#$ -M myemailaddress
-# Alerts at (b)eginning, (e)nd, (a)bort, (s)uspend
-#$ -m be
-# Copy environment
-#$ -V
-# Run from current directory
-#$ -cwd
-# Job name
-#$ -N {filename}
-# Interpreting shell
-#$ -S /bin/bash
-# Wall-clock time limit
-#$ -l h_rt={wall_time}
-# Parallel environment
-#$ -pe ompi-local {total_slots}
-# Memory per slot
-#$ -l vf={mem_per_slot}
-# Join stdout and stderr
-#$ -j y
-# Output log
-#$ -o {filename}.apollo.log
-
-echo "Got $NSLOTS slots."
-IPWD=$(pwd)
-echo "in $IPWD"
+    content = f"""#!/bin/bash
+#$ -N {filename}                         # Job name
+#$ -q A_192T_1024G.q                     # 192-core, 1024 GB queue
+#$ -l h_rt={wall_time}                   # Wall-clock time limit
+#$ -pe ompi-local {total_slots}          # Request {total_slots} CPU slots
+#$ -l vf={mem_per_slot}                  # Memory per core slot (~{mem_per_slot}/core)
+#$ -V                                    # Export environment variables
+#$ -cwd                                  # Run in current working directory
+#$ -j y                                  # Join stdout and stderr
+#$ -o {filename}.apollo.log              # Combined log file
+#$ -S /bin/bash                          # Use bash shell
 
 # Set OpenMP threads
 export OMP_NUM_THREADS={threads}
@@ -2276,9 +2260,10 @@ echo "Threading set to: OMP_NUM_THREADS={threads}"
 # Path to personal modules
 module use /hpc/srs/local/privatemodules/
 module purge
-module load CASTEP-24 modules sge
+module load CASTEP-24
+module load modules sge
 
-echo "Loaded modules:"
+echo "The following modules are loaded"
 module list
 
 # Activate conda environment
@@ -2286,12 +2271,15 @@ source /hpc/srs/local/miniconda3/etc/profile.d/conda.sh
 conda activate apollo_castep
 
 # Diagnostics
+echo "Allocated slots: $NSLOTS"
+echo "Memory per slot: $(echo \"$VF/1M\" | bc) GB"
 echo "Host: $(hostname)"
+echo "Python executable: $(which python)"
 echo "Working directory: $(pwd)"
 
 # Run the CASTEP calculation
-mpirun --mca btl ^openib --mca mtl ^psm -np {n_ranks} castep.mpi {filename}.cell
-exit 0
+echo "Running CASTEP calculation with {n_ranks} MPI ranks and {threads} OpenMP threads per rank."
+mpirun -np {n_ranks} castep.mpi {filename}
 """
 
     # Write to disk
@@ -2303,7 +2291,6 @@ exit 0
         print(content)
 
     return job_file
-
 
 
 
