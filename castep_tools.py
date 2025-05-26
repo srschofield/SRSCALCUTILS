@@ -2199,33 +2199,40 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
 
 
 # ============================================================================
-#  Generate MYRIAD job submission scripts
+#  Generate APOLLO job submission scripts
 # ============================================================================
+
+from pathlib import Path
 
 def write_job_script(
     path,
     filename,
     wall_time='24:00:00',
-    mem='10G',
-    tmpfs='10G',
-    n_procs=4,
+    mem_per_slot='5500M',
+    threads=1,
+    total_slots=192,
     display_file=False
 ):
     """
-    Write a job submission script for SGE with the given parameters.
+    Write a job submission script for SGE with hybrid MPI+OpenMP threading.
 
     Args:
         path (str or Path): Directory where the .job file will be created.
         filename (str): Base name for the job file (no extension).
-        wall_time (str): Wallclock time in format HH:MM:SS. Default '48:00:00'.
-        mem (str): Memory per process (e.g., '10G'). Default '10G'.
-        tmpfs (str): TMPDIR space per node (e.g., '20G'). Default '20G'.
-        n_procs (int): Number of processors. Default 8.
+        wall_time (str): Wallclock time in format HH:MM:SS. Default '24:00:00'.
+        mem_per_slot (str): Memory per core slot (e.g., '5500M'). Default '5500M'.
+        threads (int): OMP threads per MPI rank. Default 1.
+        total_slots (int): Total CPU cores available on the node. Default 192.
         display_file (bool): If True, print the script contents after writing.
 
     Returns:
         Path: Path to the written .job file.
     """
+    # Validate inputs
+    if total_slots % threads != 0:
+        raise ValueError(f"threads ({threads}) must divide total_slots ({total_slots}) evenly.")
+    n_ranks = total_slots // threads
+
     # Ensure output directory exists
     out_dir = Path(path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -2234,46 +2241,57 @@ def write_job_script(
     job_file = out_dir / f"{filename}.job"
 
     # Script content
-    content = f"""#!/bin/bash
-
-# Request shell
-#$ -S /bin/bash
-
-# Request wallclock time (format hours:minutes:seconds).
-#$ -l h_rt={wall_time}
-
-# Request X gigabyte of RAM per process.
-#$ -l mem={mem}
-
-# Request TMPDIR space per node
-#$ -l tmpfs={tmpfs}
-
-# Set the working directory to be the directory the job is submitted from
+    content = f"""#!/bin/bash -f
+# Set your email address to get alerts
+#$ -M myemailaddress
+# Alerts at (b)eginning, (e)nd, (a)bort, (s)uspend
+#$ -m be
+# Copy environment
+#$ -V
+# Run from current directory
 #$ -cwd
-
-# Set the name of the job.
+# Job name
 #$ -N {filename}
-
-# Merge .e and .o files (error and output)
+# Interpreting shell
+#$ -S /bin/bash
+# Wall-clock time limit
+#$ -l h_rt={wall_time}
+# Parallel environment
+#$ -pe ompi-local {total_slots}
+# Memory per slot
+#$ -l vf={mem_per_slot}
+# Join stdout and stderr
 #$ -j y
+# Output log
+#$ -o {filename}.apollo.log
 
-# Number of processors
-#$ -pe mpi {n_procs}
+echo "Got $NSLOTS slots."
+IPWD=$(pwd)
+echo "in $IPWD"
 
-# Setup the CASTEP calculation.
-module load --redirect default-modules
-module unload -f compilers mpi
-module load mpi/intel/2019/update4/intel
-module load compilers/intel/2019/update4
-module load castep/19.1.1/intel-2019
+# Set OpenMP threads
+export OMP_NUM_THREADS={threads}
+echo "Threading set to: OMP_NUM_THREADS={threads}"
+
+# Path to personal modules
+module use /hpc/srs/local/privatemodules/
+module purge
+module load CASTEP-24 modules sge
+
+echo "Loaded modules:"
+module list
+
+# Activate conda environment
+source /hpc/srs/local/miniconda3/etc/profile.d/conda.sh
+conda activate apollo_castep
+
+# Diagnostics
+echo "Host: $(hostname)"
+echo "Working directory: $(pwd)"
 
 # Run the CASTEP calculation
-
-echo -n "Starting CASTEP calculation: "
-date
-gerun castep.mpi {filename}
-echo -n "Finished: "
-date
+mpirun --mca btl ^openib --mca mtl ^psm -np {n_ranks} castep.mpi {filename}.cell
+exit 0
 """
 
     # Write to disk
@@ -2285,7 +2303,6 @@ date
         print(content)
 
     return job_file
-
 
 
 
