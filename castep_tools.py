@@ -27,7 +27,8 @@ import math
 from ase import Atoms
 import nglview as nv        # pip install nglview
 from collections import defaultdict
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Any
+
 
 from IPython.display import display, Image as StaticImage
 import time
@@ -1349,7 +1350,7 @@ def add_atoms_to_positions_frac(
                 # periodic wrap
                 f2[i] = f2[i] % 1.0
         f_final = f2 / stretch
-        out.append([
+        out.insert(0,[
             atom,
             float(f_final[0]),
             float(f_final[1]),
@@ -1578,6 +1579,40 @@ def sort_positions_frac(arr: np.ndarray,
     # Sort and return; reverse if descending
     rows_sorted = sorted(rows, key=sort_key, reverse=descending)
     return np.array(rows_sorted, dtype=object)
+
+
+def merge_posfrac_or_labelled_posfrac(a1: np.ndarray, a2: np.ndarray) -> np.ndarray:
+    """
+    Merge two 2D arrays row‐wise, preserving the first occurrence of any duplicate row.
+
+    Parameters
+    ----------
+    a1, a2 : np.ndarray
+        Input arrays of shape (n1, m) and (n2, m). Rows are compared element‐by‐element
+        (so all row elements must be hashable: e.g. numbers, strings, bools).
+
+    Returns
+    -------
+    np.ndarray
+        An array containing all unique rows from a1 then a2 (in order of first appearance),
+        shape (m, #cols), dtype same as the inputs.
+    """
+    # sanity check
+    if a1.ndim != 2 or a2.ndim != 2 or a1.shape[1] != a2.shape[1]:
+        raise ValueError(f"Both inputs must be 2D arrays with the same number of columns, "
+                         f"got {a1.shape} and {a2.shape}")
+
+    # stack them
+    combined = np.vstack((a1, a2))
+
+    seen = set()
+    unique_rows = []
+    for row in map(tuple, combined):
+        if row not in seen:
+            seen.add(row)
+            unique_rows.append(row)
+
+    return np.array(unique_rows, dtype=a1.dtype)
 
 
 def frac_to_cart(lattice_cart, positions_frac):
@@ -1873,6 +1908,44 @@ def selected_replace(data, element, replacewith, return_labelled=False):
     return result
 
 
+def selected_translate(labelled_positions_frac: List[List[Union[int, bool, str, float]]],
+                       cell: List[List[float]],
+                       v: Tuple[float, float, float],
+                       return_labelled: bool = False) -> List[List[Union[int, bool, str, float]]]:
+    """
+    Translate atoms marked True by a given displacement vector in Angstroms within the specified unit cell.
+
+    Parameters:
+    -----------
+    labelled_positions_frac : List of atom entries [label, selected, element, x, y, z]
+    cell : 3x3 list defining the unit cell vectors in Cartesian Angstroms
+    v : (dx, dy, dz) displacement in Cartesian Angstroms
+    return_labelled : If False, returns fractional positions array (drops boolean and labels via labelled_positions_frac_to_positions_frac)
+
+    Returns:
+    --------
+    If return_labelled=True, returns a new labelled_positions_frac list with selected atoms moved by v
+    Else returns only the fractional coordinates list (unit-cell scaled)
+    """
+    # Convert cell to numpy array and compute fractional displacement
+    cell_matrix = np.array(cell, dtype=float)
+    inv_cell = np.linalg.inv(cell_matrix)
+    disp_frac = inv_cell.dot(np.array(v, dtype=float))
+
+    # Prepare result copy
+    result = [list(entry) for entry in labelled_positions_frac]
+    for i, entry in enumerate(labelled_positions_frac):
+        if entry[1] is True:
+            # Add fractional displacement
+            result[i][3] += float(disp_frac[0])
+            result[i][4] += float(disp_frac[1])
+            result[i][5] += float(disp_frac[2])
+    if return_labelled:
+        return result
+    # Otherwise convert to plain fractional positions
+    return labelled_positions_frac_to_positions_frac(result)
+
+
 def selected_delete(data, return_labelled=False):
     """
     Return a new list of rows, omitting any row that contains the boolean True.
@@ -1886,8 +1959,8 @@ def selected_delete(data, return_labelled=False):
 
 
 def selected_toggle_plane_selection(labelled_positions_frac: List[List[Union[int, bool, str, float]]], 
-                            fast: str = 'x', 
-                            slow: str = 'y', 
+                            fast: str = 'y', 
+                            slow: str = 'x', 
                             alternate: bool = False
                            ) -> Tuple[List[List[Union[int, bool, str, float]]],
                                        List[List[Union[int, bool, str, float]]]]:
@@ -1961,6 +2034,45 @@ def selected_toggle_plane_selection(labelled_positions_frac: List[List[Union[int
             result2[i][1] = False
 
     return result1, result2
+
+
+def update_labelled_positions_frac(
+    labelled_positions_frac: List[List[Any]],
+    positions_frac:         List[List[Any]]
+) -> List[List[Any]]:
+    """
+    Replace the element type and (x,y,z) coords in labelled_positions_frac
+    with those in positions_frac.
+
+    Parameters
+    ----------
+    labelled_positions_frac : List of [id, flag, element, x, y, z]
+    positions_frac          : List of [element, x, y, z]
+
+    Returns
+    -------
+    new_labelled : a new list of the same shape as labelled_positions_frac,
+                   where each row is [id, flag, new_element, new_x, new_y, new_z]
+
+    Raises
+    ------
+    ValueError
+        If the two input lists have different lengths.
+    """
+    if len(labelled_positions_frac) != len(positions_frac):
+        raise ValueError(
+            f"Length mismatch: "
+            f"labelled_positions_frac has {len(labelled_positions_frac)} rows, "
+            f"positions_frac has {len(positions_frac)} rows."
+        )
+
+    updated = []
+    for (row_labelled, row_pos) in zip(labelled_positions_frac, positions_frac):
+        id_, flag = row_labelled[0], row_labelled[1]
+        elem, x, y, z = row_pos  # unpack element and coords
+        updated.append([id_, flag, elem, x, y, z])
+
+    return updated
 
 
 def extract_plane_lattice_vectors(
