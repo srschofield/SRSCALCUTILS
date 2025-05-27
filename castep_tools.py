@@ -1685,8 +1685,6 @@ def create_surface_supercell(
     return lattice_cart_super, positions_frac_super
 
 
-
-
 def create_vacuum_spacing(
     positions_frac: np.ndarray,
     lattice_cart: np.ndarray,
