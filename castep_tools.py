@@ -1586,6 +1586,107 @@ def add_atoms_to_positions_frac(
 #     return np.array(out, dtype=object)
 
 
+def create_surface_supercell(
+    lattice_cart_bulk: np.ndarray,
+    positions_frac_bulk: np.ndarray,
+    positions_frac_surf: np.ndarray,
+    n: tuple[int,int,int]
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Build an (na x nb x nc) supercell whose bottom 1/nc is the bulk motif
+    and whose top (z_multiple/nc) is the surface motif.
+
+    Returns
+    -------
+    supercell_frac : (M*na*nb, 4) object-array
+      Fractional [label, x,y,z] in the supercell.
+    lattice_cart_super : (3,3) float-array
+    The Cartesian lattice = bulk_lattice * diag(na,nb,nc).
+    """
+    # Get the unit cell repeat numbers
+    na, nb, nc = n
+
+    # Check user input - can't make a cell less that 2x in z
+    if nc < 2:
+        raise ValueError("n[2] (z-multiple) must be at least 2 for a surface supercell.")
+    
+    # Get the number of atoms in the bulk and surface cells
+    atoms_bulk = positions_frac_bulk.shape[0]
+    atoms_surf = positions_frac_surf.shape[0]
+
+    # Calculate the integer ratio of the bulk cell in the surface cell by atomno
+    if atoms_surf % atoms_bulk == 0:
+        surfbulkratio = atoms_surf // atoms_bulk
+    else:
+        raise ValueError("The number of atoms in the surface motif must be a multiple of the number of atoms in the bulk motif.")
+
+    # Calculate the repeat numbers for surface and bulk unit cells depending on size of surface cell and repeat numbers chosen
+    if nc > surfbulkratio:
+        n_bulk = nc - surfbulkratio
+    elif nc <= surfbulkratio:
+        n_bulk = 1
+        atoms_surf = atoms_surf - atoms_bulk * (nc - 1)
+        # make the surface fractional positions list smaller
+        blocks = []
+        for idx, (label, x, y, z) in enumerate(positions_frac_surf):
+            if idx >= atoms_surf:
+                break
+            blocks.append((label, x, y, z))
+        positions_frac_surf = np.array(blocks)
+        positions_frac_surf = remove_z_offset(positions_frac_surf, decimals=8)
+    
+    # Make sure the surface unit cell atoms are correctly ordered
+    positions_frac_surf = sort_positions_frac(positions_frac_surf, order=['z', 'y', 'x', 'atom'])
+
+    # Rescale the bulk coordinates. 
+    positions_frac_bulk = [
+        (label, x / na, y /nb, z /nc)
+        for (label, x, y, z) in positions_frac_bulk
+    ]   
+
+    # Rescale the surface coordinates. 
+    scale = surfbulkratio / nc 
+    positions_frac_surf = [
+        (label, x, y, z * scale)
+        for (label, x, y, z) in positions_frac_surf
+    ]   
+
+    blocks = []
+    # bulk atoms
+    for i in range(n_bulk):
+        for label, x, y, z in positions_frac_bulk:
+            z_new = i / nc + z
+            blocks.append((label, x, y, z_new))
+    #surface atoms
+    for idx, (label, x, y, z) in enumerate(positions_frac_surf):
+        if idx >= atoms_surf:
+            break
+        z_new = (n_bulk / nc) + z
+        blocks.append((label, x / na, y / nb, z_new))
+    
+    positions_frac_super = np.array(blocks, dtype=object)
+    
+    # Now calculate repeats in x and y
+    blocks = []
+    for i in range(na):
+            for j in range(nb):
+                for label, x, y, z in positions_frac_super:
+                    blocks.append((label, i / na + x , j / nb +y , z))
+
+    positions_frac_super = np.array(blocks, dtype=object)
+    positions_frac_super = sort_positions_frac(positions_frac_super, order=['z', 'y', 'x', 'atom'])
+
+    # Calculate the final unit cell
+    lattice_cart_super = lattice_cart_bulk.copy()
+    lattice_cart_super[0] = lattice_cart_super[0] * na
+    lattice_cart_super[1] = lattice_cart_super[1] * nb
+    lattice_cart_super[2] = lattice_cart_super[2] * nc
+
+    return lattice_cart_super, positions_frac_super
+
+
+
+
 def create_vacuum_spacing(
     positions_frac: np.ndarray,
     lattice_cart: np.ndarray,
