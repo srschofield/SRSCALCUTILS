@@ -114,6 +114,55 @@ def load_atoms_from_castep(path, filename):
     return positions_frac, lattice_cart
 
 
+def read_positions_frac_from_template(
+        path=".",
+        filename="filename", 
+        lattice_cart_bulk=np.array([
+            [3.8641976,     0.0,     0.0],
+            [0.0,     7.7283952,     0.0],
+            [0.0,     0.0,     5.4648012]
+        ]),
+        positions_frac_bulk = np.array([   
+            ['Si',       0.0000000000,    0.7500000000,    0.7500000000],
+            ['Si',       0.0000000000,    0.2500000000,    0.7500000000],
+            ['Si',       0.5000000000,    0.7500000000,    0.5000000000],
+            ['Si',       0.5000000000,    0.2500000000,    0.5000000000],
+            ['Si',       0.5000000000,    0.5000000000,    0.2500000000],
+            ['Si',       0.5000000000,    0.0000000000,    0.2500000000],
+            ['Si',       0.0000000000,    0.5000000000,    0.0000000000],
+            ['Si',       0.0000000000,    0.0000000000,    0.0000000000]
+            ], dtype=object),
+        surface_unit_cell_dims = np.array([1,1,2]), 
+        sort_order=['z', 'y', 'x', 'atom']
+    ):
+    """
+    Read positions in fractional coordinates from a template file.
+    """
+    # Load the template file and make sure it is sorted
+    positions_frac_surf, lattice_cart_surf = load_atoms_from_castep(path, filename)
+    positions_frac_surf = sort_positions_frac(positions_frac_surf, order=sort_order)
+
+    # Convert template to cartesian coordinates
+    positions_cart_surf = frac_to_cart(lattice_cart_surf,positions_frac_surf)
+
+    # Calculate the number of atoms in the surface unit cell to take from the template
+    number_of_atoms_surf = positions_frac_bulk.shape[0] * surface_unit_cell_dims[2]
+
+    # Select the correct number of atoms from the template
+    positions_cart_surf = positions_cart_surf[:number_of_atoms_surf,:]
+
+    # Adjust the lattice vectors for the surface unit cell (multiply the z-dimension)
+    lattice_cart_surf = lattice_cart_bulk.copy()
+    lattice_cart_surf[-1, :] *= surface_unit_cell_dims[2]  # Adjust the z-dimension
+
+    # Remove the z-offset from the fractional coordinates
+    positions_cart_surf = remove_z_offset(positions_cart_surf)   
+
+    # Convert the selected positions back to fractional coordinates
+    positions_frac_surf = cart_to_frac(lattice_cart_surf, positions_cart_surf)
+
+    return positions_frac_surf, lattice_cart_surf
+
 
 def delete_all_files_in_cwd(force: bool = False):
     cwd = Path('.').resolve()
