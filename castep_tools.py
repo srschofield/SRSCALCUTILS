@@ -53,6 +53,68 @@ def find_all_files_by_extension(root_dir, extension=".castep"):
     return list(root.rglob(f"*{extension}"))
 
 
+def load_atoms_from_castep(path, filename):
+    """
+    Read both the 'positions_frac' and 'lattice_cart' blocks
+    from a CASTEP-style text file.
+
+    Returns
+    -------
+    positions_frac : np.ndarray, shape (N,4), dtype=object
+        Rows of [element_label, x, y, z].
+    lattice_cart : np.ndarray, shape (3,3), dtype=float
+        The three Cartesian lattice vectors (in Å).
+    """
+    filepath = os.path.join(path, filename)
+    positions = []
+    lattice = []
+    inside_pos = False
+    inside_lat = False
+
+    with open(filepath, 'r') as f:
+        for line in f:
+            s = line.strip()
+
+            # detect start of one of our blocks
+            if not (inside_pos or inside_lat):
+                if s.startswith('%BLOCK'):
+                    if 'positions_frac' in s:
+                        inside_pos = True
+                    elif 'lattice_cart' in s:
+                        inside_lat = True
+                continue
+
+            # parse positions_frac block
+            if inside_pos:
+                if s.startswith('%ENDBLOCK') and 'positions_frac' in s:
+                    inside_pos = False
+                    continue
+                if s:
+                    parts = s.split()
+                    elem = parts[0]
+                    x, y, z = map(float, parts[1:4])
+                    positions.append([elem, x, y, z])
+                continue
+
+            # parse lattice_cart block
+            if inside_lat:
+                # skip the "ANG" line
+                if s.upper() == 'ANG':
+                    continue
+                if s.startswith('%ENDBLOCK') and 'lattice_cart' in s:
+                    inside_lat = False
+                    continue
+                if s:
+                    vec = list(map(float, s.split()))
+                    lattice.append(vec)
+                continue
+
+    positions_frac = np.array(positions, dtype=object)
+    lattice_cart  = np.array(lattice, dtype=float)
+    return positions_frac, lattice_cart
+
+
+
 def delete_all_files_in_cwd(force: bool = False):
     cwd = Path('.').resolve()
     files = [f for f in cwd.iterdir() if f.is_file()]
@@ -1162,6 +1224,8 @@ def write_xyz(positions_cart, path='.', filename='castep_input', comment=None):
     # Write to disk
     with open(out_path, 'w') as f:
         f.write(xyz_str)
+    
+    print(f"Wrote XYZ file to: {out_path}")
 
     return xyz_str
 
@@ -1581,6 +1645,46 @@ def sort_positions_frac(arr: np.ndarray,
     return np.array(rows_sorted, dtype=object)
 
 
+def remove_z_offset(positions_frac, decimals=7):
+    """
+    Shift all z‐coordinates so that the minimum becomes zero,
+    and round all fractional coords to at most `decimals` places.
+
+    Parameters
+    ----------
+    positions_frac : array‐like, shape (N,4), dtype object
+        Rows of [element_symbol, x_frac, y_frac, z_frac].
+    decimals : int
+        Maximum number of decimal places for x,y,z. Default is 7.
+
+    Returns
+    -------
+    new_positions : ndarray, shape (N,4), dtype object
+        Same as input but with every z_frac replaced by (z_frac – z_min),
+        and x_frac, y_frac, z_frac rounded to `decimals`.
+    """
+    arr = np.asarray(positions_frac, dtype=object)
+
+    # extract columns
+    elems = arr[:, 0]
+    coords = arr[:, 1:].astype(float)  # shape (N,3)
+
+    # compute and subtract z‐offset
+    z_min = coords[:, 2].min()
+    coords[:, 2] = coords[:, 2] - z_min
+
+    # round all three columns
+    coords = np.round(coords, decimals)
+
+    # reassemble
+    out = np.empty_like(arr)
+    out[:, 0] = elems
+    out[:, 1:] = coords
+
+    return out
+
+
+
 def merge_posfrac_or_labelled_posfrac(a1: np.ndarray, a2: np.ndarray) -> np.ndarray:
     """
     Merge two 2D arrays row‐wise, preserving the first occurrence of any duplicate row.
@@ -1615,36 +1719,91 @@ def merge_posfrac_or_labelled_posfrac(a1: np.ndarray, a2: np.ndarray) -> np.ndar
     return np.array(unique_rows, dtype=a1.dtype)
 
 
-def frac_to_cart(lattice_cart, positions_frac):
+def frac_to_cart(lattice_cart, positions_frac, tol=1e-6):
     """
-    Convert fractional coordinate array to Cartesian coordinate array.
+    Convert fractional coordinates to Cartesian and clean up small residues.
 
     Parameters
     ----------
     lattice_cart : array-like, shape (3,3)
-        Lattice vectors in Cartesian coordinates (rows are a, b, c vectors).
+        Lattice vectors in Cartesian coordinates.
     positions_frac : array-like, shape (N,4)
-        Array of N atomic positions: each row is [element_symbol, f_x, f_y, f_z].
-        The first column must be element symbols (strings), the next three columns are fractional coords.
+        Rows of [element_symbol, f_x, f_y, f_z].
+    tol : float, optional
+        Any Cartesian coordinate with abs(value) < tol is zeroed. Default 1e-6.
 
     Returns
     -------
     positions_cart : ndarray, shape (N,4), dtype object
-        Array with the same structure as `positions_frac`, but with Cartesian coordinates in columns 1–3.
+        Rows of [element_symbol, x, y, z], where x,y,z are floats rounded to 6 dp.
     """
     lattice_cart = np.asarray(lattice_cart, dtype=float)
     positions_frac = np.asarray(positions_frac, dtype=object)
 
     n = len(positions_frac)
     positions_cart = np.empty((n, 4), dtype=object)
+
     for i, row in enumerate(positions_frac):
         symbol = row[0]
         frac = np.array(row[1:], dtype=float)
         cart = frac.dot(lattice_cart)
+
+        # zero out tiny residuals below tol
+        cart[np.abs(cart) < tol] = 0.0
+
+        # round to 7 decimal places
+        cart = np.round(cart, 7)
+
         positions_cart[i, 0] = symbol
         positions_cart[i, 1:] = cart
 
     return positions_cart
+
+
+def cart_to_frac(lattice_cart, positions_cart, tol=1e-6):
+    """
+    Convert Cartesian coordinates back to fractional coordinates,
+    zeroing out any small residues and rounding to 6 decimal places.
+
+    Parameters
+    ----------
+    lattice_cart : array-like, shape (3,3)
+        Lattice vectors in Cartesian coordinates (rows are a, b, c).
+    positions_cart : array-like, shape (N,4)
+        Rows of [element_symbol, x, y, z] in Cartesian coords.
+    tol : float, optional
+        Any fractional coordinate with abs(value) < tol is zeroed. Default 1e-6.
+
+    Returns
+    -------
+    positions_frac : ndarray, shape (N,4), dtype object
+        Rows of [element_symbol, f_x, f_y, f_z], with floats rounded to 6 dp.
+    """
+    # ensure float array and invert
+    lat = np.asarray(lattice_cart, dtype=float)
+    inv_lat = np.linalg.inv(lat)
+
+    pcs = np.asarray(positions_cart, dtype=object)
+    n = len(pcs)
+    positions_frac = np.empty((n, 4), dtype=object)
+
+    for i, row in enumerate(pcs):
+        symbol = row[0]
+        cart = np.array(row[1:], dtype=float)
+
+        # fractional = cart · inv(lat)
+        frac = cart.dot(inv_lat)
+
+        # zero-out tiny values
+        frac[np.abs(frac) < tol] = 0.0
+
+        # round to 6 decimal places
+        frac = np.round(frac, 6)
+
+        positions_frac[i, 0] = symbol
+        positions_frac[i, 1:] = frac
+
+    return positions_frac
 
 
 def select_atoms_by_region(positions_frac, lattice_cart, condition,
