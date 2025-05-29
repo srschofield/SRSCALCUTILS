@@ -11,9 +11,8 @@ for training and prediction.
 Created May 2025
 
 """
-
 # ============================================================================
-# Module dependencies
+#region Module dependencies
 # ============================================================================
 
 import os
@@ -34,8 +33,14 @@ from IPython.display import display, Image as StaticImage
 import time
 
 # ============================================================================
-# Basic file io and handling
+#endregion Module dependencies
 # ============================================================================
+
+
+# ============================================================================
+#region Basic file io and handling
+# ============================================================================
+
 def find_all_files_by_extension(root_dir, extension=".castep"):
     """
     Recursively finds all files with the given extension under the specified directory.
@@ -194,59 +199,14 @@ def delete_all_files_in_cwd(force: bool = False):
     print(f"Done. {deleted} file(s) deleted.")
 
 
-def show_only_true(data):
-    """
-    Return only those rows from `data` (a list of rows) 
-    where at least one element is the boolean True.
-    """
-    return [row for row in data if any(cell is True for cell in row)]
-
-
-def labelled_positions_frac_to_positions_frac(labelled):
-    """
-    Given an array-like `labelled` where each row has two extra columns
-    on the left (e.g. an index and a boolean flag), return a new NumPy
-    array containing only the remaining columns (label + fractions).
-    
-    Example input rows:
-      [1, True, 'Si', 0.0,  0.0,  0.0]
-      [2, True, 'Si', 0.5,  0.0,  0.25]
-      ...
-    
-    Output rows:
-      ['Si', 0.0,  0.0,  0.0]
-      ['Si', 0.5,  0.0,  0.25]
-      ...
-    """
-    arr = np.asarray(labelled, dtype=object)
-    # slice off the first two columns
-    return arr[:, 2:]
-
-
+# ============================================================================
+#endregion Basic file io and handling
+# ============================================================================
 
 
 # ============================================================================
-#  General information
+#region Get information from .castep files
 # ============================================================================
-
-def print_filename(castep_path):
-    """
-    Prints a clear heading with filename and full path.
-    """
-    path = Path(castep_path)
-    filename = path.name
-    parent_path = path.parent
-    full_path = parent_path / filename
-
-    # Build a consistent-width header
-    header_text = f" FILE: {filename} "
-    path_text   = f" PATH: {full_path} "
-    width = max(len(header_text), len(path_text)) + 4
-
-    print("\n" + "=" * width)
-    print(header_text.center(width))
-    print(path_text.center(width))
-    print("=" * width + "\n")
 
 
 def get_warnings(castep_path, verbose=True):
@@ -384,73 +344,6 @@ def get_calculation_parameters(castep_path):
     return results
 
 
-def collect_summary_table(data_path):
-    """
-    Scans all .castep files under data_path and builds a summary table with:
-    - filename (no extension)
-    - relative path to data_path
-    - nx, ny, nz
-    - kx, ky, kz
-    - cut-off energy
-    - net charge and net spin
-    - final enthalpy
-    Returns: pandas DataFrame
-    """
-    job_path = Path(data_path).resolve()
-    castep_files = find_all_files_by_extension(job_path, extension=".castep")
-    
-    summary = []
-
-    for castep_path in castep_files:
-        castep_path = Path(castep_path).resolve()
-        rel_path = castep_path.parent.relative_to(job_path)
-        filename = castep_path.stem
-
-        # Get data
-        try:
-            cell = extract_lattice_parameters(castep_path)
-            general = extract_summary_parameters(castep_path)
-            enthalpy = extract_LBFGS_final_enthalpy(castep_path)
-        except Exception as e:
-            print(f"Skipping {castep_path} due to error: {e}")
-            continue
-
-        # Cell params
-        nx = cell.get("nx", None)
-        ny = cell.get("ny", None)
-        nz = cell.get("nz", None)
-
-        # MP grid params
-        kx = general.get("kx", None)
-        ky = general.get("ky", None)
-        kz = general.get("kz", None)
-
-        # Other general params
-        cut = general.get("plane wave basis set cut-off", None)
-        charge = general.get("net charge of system", None)
-        spin = general.get("net spin   of system", None)
-
-        summary.append({
-            "File": filename,
-            "RelPath": str(rel_path),
-            "nx": nx,
-            "ny": ny,
-            "nz": nz,
-            "kx": kx,
-            "ky": ky,
-            "kz": kz,
-            "Cut-off (eV)": cut,
-            "Net Charge": charge,
-            "Net Spin": spin,
-            "Final Enthalpy (eV)": enthalpy
-        })
-
-    return pd.DataFrame(summary)
-
-
-# ============================================================================
-#  Energy information
-# ============================================================================
 def get_LBFGS_energies(castep_path):
     """
     Extracts iteration numbers and enthalpy values from LBFGS optimization steps.
@@ -474,6 +367,7 @@ def get_LBFGS_energies(castep_path):
                 results.append((iteration, enthalpy))
 
     return results
+
 
 def get_LBFGS_final_enthalpy(castep_path):
     """
@@ -501,33 +395,6 @@ def get_LBFGS_final_enthalpy(castep_path):
     except Exception as e:
         return float('nan')  # or return None
 
-
-
-
-
-# ============================================================================
-#  Structure information
-# ============================================================================
-
-# def get_lattice_parameters(castep_path):
-#     with open(castep_path, 'r') as f:
-#         lines = f.readlines()
-
-#     for i in range(len(lines) - 1, 0, -1):
-#         if "Lattice parameters" in lines[i]:
-#             # Should be followed by 3 lines like: a = 5.43  alpha = 90.0
-#             a_line = lines[i+1].strip().split()
-#             b_line = lines[i+2].strip().split()
-#             c_line = lines[i+3].strip().split()
-
-#             a = float(a_line[2])
-#             alpha = float(a_line[5])
-#             b = float(b_line[2])
-#             beta = float(b_line[5])
-#             c = float(c_line[2])
-#             gamma = float(c_line[5])
-#             return {'a': a, 'b': b, 'c': c, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
-#     return None
 
 def get_lattice_parameters(castep_path):
     """
@@ -622,7 +489,6 @@ def get_lattice_parameters(castep_path):
 
     return results
 
-import re
 
 def get_final_lattice_parameters(castep_path):
     """
@@ -706,7 +572,7 @@ def get_final_lattice_parameters(castep_path):
     return unit_cell, a, b, c, alpha, beta, gamma
 
 
-def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
+def get_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
     ax, ay, az = 'err', 'err', 'err'
     nx, ny, nz = 'err', 'err', 'err'
     with open(castep_path, 'r') as f:
@@ -741,7 +607,6 @@ def extract_lattice_parameters(castep_path, a0=3.8668346, vac=15.0):
                 nx, ny, nz = 'err', 'err', 'err'
 
     return {'ax': ax, 'ay': ay, 'az': az, 'nx': nx, 'ny': ny, 'nz': nz, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
-
 
 
 def get_final_fractional_positions(castep_path):
@@ -795,8 +660,8 @@ def get_final_fractional_positions(castep_path):
 
 def fractional_coords_from_castep(castep_path):
     # 1. extract fractional positions and lattice
-    fracs = extract_final_fractional_positions(castep_path)   # returns [(symbol,u,v,w),…]
-    lat   = extract_lattice_parameters(castep_path)           # {'a':…, 'b':…, 'c':…, …}
+    fracs = get_final_fractional_positions(castep_path)   # returns [(symbol,u,v,w),…]
+    lat   = get_lattice_parameters(castep_path)           # {'a':…, 'b':…, 'c':…, …}
 
     # 2. clean up symbols and build lists
     symbols = [s.split(':')[0] for s, u, v, w in fracs]  # drop any “:D” suffix
@@ -818,7 +683,12 @@ def fractional_coords_from_castep(castep_path):
 
 
 # ============================================================================
-#  Plotting and viewing functions
+#endregion Get information from .castep files
+# ============================================================================
+
+
+# ============================================================================
+#region Plotting and visualization functions
 # ============================================================================
 
 def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Convergence", figsize=(6, 4)):
@@ -841,6 +711,7 @@ def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Conver
     plt.tight_layout()
     plt.show()
 
+
 def view_structure(atoms,show_structure=True):
     view = nv.show_ase(atoms,scale=0.01, aspectRatio=1.)
     view.camera = 'orthographic'
@@ -854,6 +725,7 @@ def view_structure(atoms,show_structure=True):
     else:
         return view
     
+
 def plot_sequence(
     y,
     x=None,
@@ -895,10 +767,13 @@ def plot_sequence(
     plt.show()
 
 
+# ============================================================================
+#endregion Plotting and visualization functions
+# ============================================================================
 
         
 # ============================================================================
-#  Write CASTEP files
+#region Writing CASTEP input files
 # ============================================================================
 
 def write_block_lattice_cart(lattice_cart):
@@ -1280,8 +1155,41 @@ def write_xyz(positions_cart, path='.', filename='castep_input', comment=None):
 
 
 # ============================================================================
-#  Manipulate coordinates and cells
+#endregion Writing CASTEP input files
 # ============================================================================
+
+
+# ============================================================================
+#region Manipulate arrays, lists, coordinates, and cells. 
+# ============================================================================
+
+def show_only_true(data):
+    """
+    Return only those rows from `data` (a list of rows) 
+    where at least one element is the boolean True.
+    """
+    return [row for row in data if any(cell is True for cell in row)]
+
+
+def labelled_positions_frac_to_positions_frac(labelled):
+    """
+    Given an array-like `labelled` where each row has two extra columns
+    on the left (e.g. an index and a boolean flag), return a new NumPy
+    array containing only the remaining columns (label + fractions).
+    
+    Example input rows:
+      [1, True, 'Si', 0.0,  0.0,  0.0]
+      [2, True, 'Si', 0.5,  0.0,  0.25]
+      ...
+    
+    Output rows:
+      ['Si', 0.0,  0.0,  0.0]
+      ['Si', 0.5,  0.0,  0.25]
+      ...
+    """
+    arr = np.asarray(labelled, dtype=object)
+    # slice off the first two columns
+    return arr[:, 2:]
 
 
 def replace_element(data, old, new):
@@ -2404,7 +2312,7 @@ def update_labelled_positions_frac(
     return updated
 
 
-def extract_plane_lattice_vectors(
+def get_plane_lattice_vectors(
     labelled_positions_frac,
     lattice_cart
 ):
@@ -2528,7 +2436,12 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
 
 
 # ============================================================================
-#  Generate APOLLO job submission scripts
+#endregion Manipulate arrays, lists, coordinates, and cells. 
+# ============================================================================
+
+
+# ============================================================================
+#region Generate APOLLO job submission scripts
 # ============================================================================
 
 def write_job_script(
@@ -2651,10 +2564,98 @@ mpirun -np {n_ranks} castep.mpi {filename}
     return job_file
 
 
+# ============================================================================
+#endregion Generate APOLLO job submission scripts
+# ============================================================================
+
 
 # ============================================================================
-#  Macro like functions doing multiple things
+#region MACRO like functiond
 # ============================================================================
+def print_filename(castep_path):
+    """
+    Prints a clear heading with filename and full path.
+    """
+    path = Path(castep_path)
+    filename = path.name
+    parent_path = path.parent
+    full_path = parent_path / filename
+
+    # Build a consistent-width header
+    header_text = f" FILE: {filename} "
+    path_text   = f" PATH: {full_path} "
+    width = max(len(header_text), len(path_text)) + 4
+
+    print("\n" + "=" * width)
+    print(header_text.center(width))
+    print(path_text.center(width))
+    print("=" * width + "\n")
+    
+    
+def collect_summary_table(data_path):
+    """
+    Scans all .castep files under data_path and builds a summary table with:
+    - filename (no extension)
+    - relative path to data_path
+    - nx, ny, nz
+    - kx, ky, kz
+    - cut-off energy
+    - net charge and net spin
+    - final enthalpy
+    Returns: pandas DataFrame
+    """
+    job_path = Path(data_path).resolve()
+    castep_files = find_all_files_by_extension(job_path, extension=".castep")
+    
+    summary = []
+
+    for castep_path in castep_files:
+        castep_path = Path(castep_path).resolve()
+        rel_path = castep_path.parent.relative_to(job_path)
+        filename = castep_path.stem
+
+        # Get data
+        try:
+            cell = get_lattice_parameters(castep_path)
+            general = get_summary_parameters(castep_path)
+            enthalpy = get_LBFGS_final_enthalpy(castep_path)
+        except Exception as e:
+            print(f"Skipping {castep_path} due to error: {e}")
+            continue
+
+        # Cell params
+        nx = cell.get("nx", None)
+        ny = cell.get("ny", None)
+        nz = cell.get("nz", None)
+
+        # MP grid params
+        kx = general.get("kx", None)
+        ky = general.get("ky", None)
+        kz = general.get("kz", None)
+
+        # Other general params
+        cut = general.get("plane wave basis set cut-off", None)
+        charge = general.get("net charge of system", None)
+        spin = general.get("net spin   of system", None)
+
+        summary.append({
+            "File": filename,
+            "RelPath": str(rel_path),
+            "nx": nx,
+            "ny": ny,
+            "nz": nz,
+            "kx": kx,
+            "ky": ky,
+            "kz": kz,
+            "Cut-off (eV)": cut,
+            "Net Charge": charge,
+            "Net Spin": spin,
+            "Final Enthalpy (eV)": enthalpy
+        })
+
+    return pd.DataFrame(summary)
+
+
 def optimisation_summary_macro_1(castep_paths):
     for castep_path in castep_paths:
         # Header and error information
@@ -2662,20 +2663,15 @@ def optimisation_summary_macro_1(castep_paths):
         #ct.extract_warnings(castep_path,verbose=True)
 
         # Energy convergence
-        convergence = extract_LBFGS_energies(castep_path)
-        final_enthalpy = extract_LBFGS_final_enthalpy(castep_path)
+        convergence = get_LBFGS_energies(castep_path)
+        final_enthalpy = get_LBFGS_final_enthalpy(castep_path)
         print('Final enthalpy = {} eV.'.format(final_enthalpy))
         plot_energy_vs_iteration(convergence, title=castep_path.stem+' '+str(final_enthalpy),figsize=(5,2))
         
         # Unit cell parameters
-        cell = extract_lattice_parameters(castep_path,a0=3.8668346, vac=15.0)
+        cell = get_calculation_parameters(castep_path,a0=3.8668346, vac=15.0)
         cell_df = pd.DataFrame(cell.items(), columns=["Cell parameters", "Value"])
         display(cell_df) 
-
-        # General parameters
-        general_params =  extract_summary_parameters(castep_path)
-        general_params_df = pd.DataFrame(general_params.items(), columns=["General parameter", "Value"])
-        display(general_params_df) 
 
         # Show structure
         atoms = fractional_coords_from_castep(castep_path)
@@ -2683,3 +2679,7 @@ def optimisation_summary_macro_1(castep_paths):
         display(view)
         img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
         display(img)
+
+# ============================================================================
+#endregion Generate APOLLO job submission scripts
+# ============================================================================
