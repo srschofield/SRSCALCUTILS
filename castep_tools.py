@@ -1283,6 +1283,28 @@ def write_xyz(positions_cart, path='.', filename='castep_input', comment=None):
 #  Manipulate coordinates and cells
 # ============================================================================
 
+
+def replace_element(data, old, new):
+    """
+    Replace all occurrences of `old` with `new` in a nested list or numpy array.
+    Returns a new data structure with replacements, leaving the original intact.
+    """
+    # Handle numpy arrays
+    if isinstance(data, np.ndarray):
+        arr = data.copy()
+        arr[arr == old] = new
+        return arr
+    
+    # Handle plain Python nested lists
+    if isinstance(data, list):
+        return [
+            [new if elem == old else elem for elem in row]
+            for row in data
+        ]
+    
+    raise TypeError(f"Unsupported data type: {type(data)}")
+
+
 def create_supercell_from_fractional_coords(
     positions_frac: np.ndarray,
     lattice_cart: np.ndarray,
@@ -2509,56 +2531,85 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
 #  Generate APOLLO job submission scripts
 # ============================================================================
 
-from pathlib import Path
-
 def write_job_script(
     path,
     filename,
     wall_time='24:00:00',
-    mem_per_slot='5500M',
+    queue_name='A_192T_1024G.q',
+    available_cores=192,
+    available_memory='1024G',
     threads=1,
-    total_slots=192,
+    safety_factor=0.98,
     display_file=False
 ):
     """
-    Write a job submission script for SGE with hybrid MPI+OpenMP threading.
+    Write a job submission script for SGE with hybrid MPI+OpenMP threading,
+    allocating a conservative estimate of memory per slot by applying a safety margin.
 
     Args:
         path (str or Path): Directory where the .job file will be created.
         filename (str): Base name for the job file (no extension).
         wall_time (str): Wallclock time in format HH:MM:SS. Default '24:00:00'.
-        mem_per_slot (str): Memory per core slot (e.g., '5500M'). Default '5500M'.
+        queue_name (str): Name of the SGE queue. Default 'A_192T_1024G.q'.
+        available_cores (int): Total CPU cores available on the queue. Default 192.
+        available_memory (str or int): Total memory available on the queue
+            (e.g., '1024G', '1048576M', or integer GB). Default '1024G'.
         threads (int): OMP threads per MPI rank. Default 1.
-        total_slots (int): Total CPU cores available on the node. Default 192.
+        safety_factor (float): Fraction of total memory to allocate (e.g., 0.98 for 2% margin).
+            Must be between 0 and 1. Default 0.98.
         display_file (bool): If True, print the script contents after writing.
 
     Returns:
         Path: Path to the written .job file.
+
+    Raises:
+        ValueError: If threads do not divide available_cores or safety_factor out of range
+                    or memory string format is invalid.
     """
-    # Validate inputs
-    if total_slots % threads != 0:
-        raise ValueError(f"threads ({threads}) must divide total_slots ({total_slots}) evenly.")
-    n_ranks = total_slots // threads
+    # Validate threads and safety
+    if available_cores % threads != 0:
+        raise ValueError(f"threads ({threads}) must divide available_cores ({available_cores}) evenly.")
+    if not (0 < safety_factor <= 1):
+        raise ValueError("safety_factor must be between 0 (exclusive) and 1 (inclusive).")
+
+    n_ranks = available_cores // threads
+
+    # Parse available_memory into megabytes
+    if isinstance(available_memory, int):
+        total_mem_mb = available_memory * 1024
+    else:
+        mem_str = str(available_memory).strip().upper()
+        if mem_str.endswith('G'):
+            total_mem_mb = int(mem_str[:-1]) * 1024
+        elif mem_str.endswith('M'):
+            total_mem_mb = int(mem_str[:-1])
+        else:
+            raise ValueError("available_memory must be an integer or end with 'G' or 'M'.")
+
+    # Apply safety margin and compute per-slot memory
+    effective_mem_mb = int(total_mem_mb * safety_factor)
+    mem_per_slot_mb = effective_mem_mb // available_cores
+    mem_per_slot = f"{mem_per_slot_mb}M"
 
     # Ensure output directory exists
     out_dir = Path(path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build file path
+    # Build job file path
     job_file = out_dir / f"{filename}.job"
 
-    # Script content
+    # Generate script content
     content = f"""#!/bin/bash
 #$ -N {filename}                         # Job name
-#$ -q A_192T_1024G.q                     # 192-core, 1024 GB queue
-#$ -l h_rt={wall_time}                   # Wall-clock time limit
-#$ -pe ompi-local {total_slots}          # Request {total_slots} CPU slots
-#$ -l vf={mem_per_slot}                  # Memory per core slot (~{mem_per_slot}/core)
-#$ -V                                    # Export environment variables
-#$ -cwd                                  # Run in current working directory
-#$ -j y                                  # Join stdout and stderr
+#$ -q {queue_name}                    # Queue name
+#$ -l h_rt={wall_time}                     # Wall-clock time limit
+#$ -pe ompi-local {available_cores}                   # Request {available_cores} CPU slots
+#$ -l vf={mem_per_slot}                          # Memory per core slot (~{mem_per_slot}/core)
+#$ -V                                   # Export environment variables
+#$ -cwd                                 # Run in current working directory
+#$ -j y                                 # Join stdout and stderr
 #$ -o {filename}.apollo.log              # Combined log file
-#$ -S /bin/bash                          # Use bash shell
+#$ -S /bin/bash                         # Use bash shell
 
 # Set OpenMP threads
 export OMP_NUM_THREADS={threads}
@@ -2579,7 +2630,7 @@ conda activate apollo_castep
 
 # Diagnostics
 echo "Allocated slots: $NSLOTS"
-echo "Memory per slot: $(echo \"$VF/1M\" | bc) GB"
+echo "Reserved memory per slot: $VF"
 echo "Host: $(hostname)"
 echo "Python executable: $(which python)"
 echo "Working directory: $(pwd)"
