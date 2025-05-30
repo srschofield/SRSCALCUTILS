@@ -55,10 +55,14 @@ def find_all_files_by_extension(root_dir, extension=".castep"):
     root = Path(root_dir)
     if not extension.startswith("."):
         extension = "." + extension
-    return list(root.rglob(f"*{extension}"))
+
+    file_list = list(root.rglob(f"*{extension}"))
+    file_list = sort_file_list(file_list)
+    return file_list
 
 
-def load_atoms_from_castep(path, filename):
+#def load_atoms_from_castep(path, filename):
+def read_positions_frac(path, filename):
     """
     Read both the 'positions_frac' and 'lattice_cart' blocks
     from a CASTEP-style text file.
@@ -144,7 +148,7 @@ def read_positions_frac_from_template(
     Read positions in fractional coordinates from a template file.
     """
     # Load the template file and make sure it is sorted
-    positions_frac_surf, lattice_cart_surf = load_atoms_from_castep(path, filename)
+    positions_frac_surf, lattice_cart_surf = read_positions_frac(path, filename)
     positions_frac_surf = sort_positions_frac(positions_frac_surf, order=sort_order)
 
     # Convert template to cartesian coordinates
@@ -197,6 +201,32 @@ def delete_all_files_in_cwd(force: bool = False):
             print(f"Error deleting {entry.name}: {e}")
 
     print(f"Done. {deleted} file(s) deleted.")
+
+
+def sort_file_list(file_list):
+    """
+    Sort a list of Path objects naturally by filename.
+    
+    Parameters:
+        file_list (List[Path]): List of Path objects to sort.
+    
+    Returns:
+        List[Path]: Sorted list of Path objects.
+    """
+    # Define a natural sort key
+    def natural_key(path):
+        parts = re.split(r'(\d+)', path.name)
+        return [int(text) if text.isdigit() else text.lower() for text in parts]
+
+    if not file_list:
+        return []
+
+    # Ensure all items are Path objects
+    if not all(isinstance(f, Path) for f in file_list):
+        raise ValueError("All items in file_list must be Path objects.")
+    
+    # Sort using the natural key
+    return sorted(file_list, key=natural_key)
 
 
 # ============================================================================
@@ -325,9 +355,10 @@ def get_calculation_parameters(castep_path):
             if "MP grid size for SCF calculation is" in line:
                 match = re.findall(r'\d+', line)
                 if len(match) == 3:
-                    results['kx'] = int(match[0])
-                    results['ky'] = int(match[1])
-                    results['kz'] = int(match[2])
+                    kx = int(match[0])
+                    ky = int(match[1])
+                    kz = int(match[2])
+                    results['k_points_mp_grid'] = (kx,ky,kz)
 
             # Offset
             if "with an offset of" in line:
@@ -691,6 +722,26 @@ def fractional_coords_from_castep(castep_path):
 #region Plotting and visualization functions
 # ============================================================================
 
+def print_filename(castep_path):
+    """
+    Prints a clear heading with filename and full path.
+    """
+    path = Path(castep_path)
+    filename = path.name
+    parent_path = path.parent
+    full_path = parent_path / filename
+
+    # Build a consistent-width header
+    header_text = f" FILE: {filename} "
+    path_text   = f" PATH: {full_path} "
+    width = max(len(header_text), len(path_text)) + 4
+
+    print("\n" + "=" * width)
+    print(header_text.center(width))
+    print(path_text.center(width))
+    print("=" * width + "\n")
+    
+
 def plot_energy_vs_iteration(data, ylabel="Energy (eV)", title="Energy Convergence", figsize=(6, 4)):
     if not data:
         print("No data to plot.")
@@ -892,7 +943,7 @@ def write_cell_file(
         positions_frac=None,
         cell_constraints=None,
         ionic_constraints=None,
-        fix_all_ions=True,
+        fix_all_ions=False,
         symmetry_generate=None,
         symmetry_tol = None,
         kpoints_mp_grid=None,
@@ -1412,111 +1463,7 @@ def add_atoms_to_positions_frac(
     return positions_frac, new_lattice_cart
 
 
-# def dimerise_displacement(
-#     labeled_positions_frac,
-#     lattice_cart,
-#     dimer_direction,
-#     displacement_direction,
-#     displacement=0.5,
-#     start_phase='+',
-#     alternate=False,
-#     wrap_axes=(1,1,1)
-# ):
-#     """
-#     Displace selected atoms in alternating directions (dimerisation):
-#     pairing along `dimer_direction`, displacing along `displacement_direction`.
-
-#     Parameters
-#     ----------
-#     labeled_positions_frac : sequence of [idx, flag, sym, fx, fy, fz]
-#         Input atoms; only those with flag=True are processed.
-#     lattice_cart : (3,3) array-like
-#         Cartesian cell vectors (rows), used to convert Angstrom to fractional.
-#     dimer_direction : {'x','y','z'}
-#         Axis along which atoms are paired (chains formed by identical values
-#         of the other two fractional coords).
-#     displacement_direction : {'x','y','z'}
-#         Axis along which to apply alternating displacement.
-#     displacement : float, optional
-#         Cartesian displacement magnitude in Angstrom (default=0.5).
-#     start_phase : {'+','-'}, optional
-#         Sign of the first displacement in the first chain (default='+').
-#     alternate : bool, optional
-#         If True, flip the start_phase for each new chain in order (default=False).
-#     wrap_axes : length-3 sequence of 0/1, optional
-#         Axes where periodic wrapping should apply (default=(1,1,1)).
-
-#     Returns
-#     -------
-#     positions_frac : ndarray of shape (N, 4), dtype=object
-#         Array of [symbol, fx, fy, fz] with updated fractional positions.
-
-#     Raises
-#     ------
-#     ValueError
-#         If any chain has an odd number of atoms or invalid directions.
-#     """
-#     # Map directions to indices
-#     axes = {'x':0, 'y':1, 'z':2}
-#     if dimer_direction not in axes or displacement_direction not in axes:
-#         raise ValueError("`dimer_direction` and `displacement_direction` must be one of 'x','y','z'.")
-#     dimer_ax = axes[dimer_direction]
-#     disp_ax  = axes[displacement_direction]
-
-#     # Convert displacement (Å) to fractional along disp_ax
-#     disp_vec = np.zeros(3, dtype=float)
-#     disp_vec[disp_ax] = displacement
-#     inv_lat = np.linalg.inv(lattice_cart)
-#     disp_frac = disp_vec @ inv_lat
-
-#     # Prepare atom data
-#     atoms = []
-#     for idx, flag, sym, fx, fy, fz in labeled_positions_frac:
-#         atoms.append({'flag': flag,
-#                       'sym': sym,
-#                       'coord': np.array([fx,fy,fz], float)})
-
-#     # Group flagged atoms by the other two coords
-#     groups = {}
-#     for atom in atoms:
-#         if not atom['flag']:
-#             continue
-#         key = tuple(np.delete(atom['coord'], dimer_ax))
-#         groups.setdefault(key, []).append(atom)
-
-#     # Check even sizes and apply alternating displacements
-#     # Sort groups by key for consistent ordering
-#     sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
-#     for idx, (key, grp) in enumerate(sorted_items):
-#         if len(grp) % 2 != 0:
-#             raise ValueError(f"Chain at {key} has odd number of atoms ({len(grp)})")
-#         # Determine phase for this chain
-#         phase = start_phase
-#         if alternate and (idx % 2 == 1):
-#             phase = '+' if start_phase == '-' else '-'
-#         sign = 1 if phase == '+' else -1
-#         # Sort along dimer axis and apply
-#         grp.sort(key=lambda a: a['coord'][dimer_ax])
-#         for atom in grp:
-#             atom['coord'][disp_ax] += sign * disp_frac[disp_ax]
-#             sign *= -1
-
-#     # Build output with wrapping/clamping
-#     wrap = np.array(wrap_axes, int)
-#     out = []
-#     for atom in atoms:
-#         c = atom['coord']
-#         for i in range(3):
-#             if wrap[i]:
-#                 c[i] %= 1.0
-#             else:
-#                 c[i] = min(max(c[i], 0.0), 1.0)
-#         out.append([atom['sym'], float(c[0]), float(c[1]), float(c[2])])
-
-#     return np.array(out, dtype=object)
-
-
-def create_surface_supercell(
+def create_surface_supercell_from_template(
     lattice_cart_bulk: np.ndarray,
     positions_frac_bulk: np.ndarray,
     positions_frac_surf: np.ndarray,
@@ -1549,13 +1496,14 @@ def create_surface_supercell(
         surfbulkratio = atoms_surf // atoms_bulk
     else:
         raise ValueError("The number of atoms in the surface motif must be a multiple of the number of atoms in the bulk motif.")
-
+    
+    print('atoms_surf1:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'surfbulkratio:', surfbulkratio)
     # Calculate the repeat numbers for surface and bulk unit cells depending on size of surface cell and repeat numbers chosen
     if nc > surfbulkratio:
         n_bulk = nc - surfbulkratio
     elif nc <= surfbulkratio:
         n_bulk = 1
-        atoms_surf = atoms_surf - atoms_bulk * (nc - 1)
+        atoms_surf = atoms_surf - atoms_bulk * (surfbulkratio - nc +1)
         # make the surface fractional positions list smaller
         blocks = []
         for idx, (label, x, y, z) in enumerate(positions_frac_surf):
@@ -1564,7 +1512,8 @@ def create_surface_supercell(
             blocks.append((label, x, y, z))
         positions_frac_surf = np.array(blocks)
         positions_frac_surf = remove_z_offset(positions_frac_surf, decimals=8)
-    
+    print('atoms_surf2:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'n_bulk:', n_bulk, 'surfbulkratio:', surfbulkratio)
+
     # Make sure the surface unit cell atoms are correctly ordered
     positions_frac_surf = sort_positions_frac(positions_frac_surf, order=['z', 'y', 'x', 'atom'])
 
@@ -1628,16 +1577,16 @@ def create_vacuum_spacing(
     positions_frac : ndarray, shape (M,4), dtype object
         Each row is [atom_label, frac_x, frac_y, frac_z] of the original cell.
     lattice_cart : ndarray, shape (3,3), float
-        The Cartesian lattice vectors as rows: [a⃗; b⃗; c⃗].
+        The Cartesian lattice vectors as rows: [a,b,c].
     vac : float
-        Vacuum thickness to add along the c‐axis (in Å).
+        Vacuum thickness to add along the c-axis (in Å).
 
     Returns
     -------
     new_positions_frac : ndarray, shape (M,4), dtype object
-        [atom_label, frac_x, frac_y, frac_z_new] with z‐fractions scaled by orig_c/(orig_c+vac).
+        [atom_label, frac_x, frac_y, frac_z_new] with z-fractions scaled by orig_c/(orig_c+vac).
     new_lattice_cart : ndarray, shape (3,3), float
-        Same a⃗ and b⃗, but c⃗ lengthened by vac.
+        Same a and b, but c lengthened by vac.
     """
     # -- validate inputs
     pos = np.asarray(positions_frac, dtype=object)
@@ -2572,26 +2521,6 @@ mpirun -np {n_ranks} castep.mpi {filename}
 # ============================================================================
 #region MACRO like functiond
 # ============================================================================
-def print_filename(castep_path):
-    """
-    Prints a clear heading with filename and full path.
-    """
-    path = Path(castep_path)
-    filename = path.name
-    parent_path = path.parent
-    full_path = parent_path / filename
-
-    # Build a consistent-width header
-    header_text = f" FILE: {filename} "
-    path_text   = f" PATH: {full_path} "
-    width = max(len(header_text), len(path_text)) + 4
-
-    print("\n" + "=" * width)
-    print(header_text.center(width))
-    print(path_text.center(width))
-    print("=" * width + "\n")
-    
-    
 def collect_summary_table(data_path):
     """
     Scans all .castep files under data_path and builds a summary table with:
