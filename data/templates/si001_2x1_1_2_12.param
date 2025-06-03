@@ -1,0 +1,15 @@
+!TITLE: Job folder: si001_2x1_1_2_12. Filename: si001_2x1_1_2_12.
+
+TASK                 : geomopt
+XC_FUNCTIONAL        : PBE
+CUT_OFF_ENERGY       : 700
+SPIN_POLARISED       : false
+WRITE_CELL_STRUCTURE : true
+CHARGE               : 0
+NEXTRA_BANDS         : 4
+GEOM_ENERGY_TOL      : 5e-05
+GEOM_DISP_TOL        : 0.002
+GEOM_MAX_ITER        : 100
+GEOM_CONVERGENCE_WIN : 2
+MAX_SCF_CYCLES       : 300
+
