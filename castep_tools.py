@@ -141,7 +141,7 @@ def read_positions_frac_from_template(
             ['Si',       0.0000000000,    0.5000000000,    0.0000000000],
             ['Si',       0.0000000000,    0.0000000000,    0.0000000000]
             ], dtype=object),
-        surface_unit_cell_dims = np.array([1,1,2]), 
+        template_unit_cell_dims = np.array([1,1,2]), 
         sort_order=['z', 'y', 'x', 'atom']
     ):
     """
@@ -155,14 +155,14 @@ def read_positions_frac_from_template(
     positions_cart_surf = frac_to_cart(lattice_cart_surf,positions_frac_surf)
 
     # Calculate the number of atoms in the surface unit cell to take from the template
-    number_of_atoms_surf = positions_frac_bulk.shape[0] * surface_unit_cell_dims[2]
+    number_of_atoms_surf = positions_frac_bulk.shape[0] * template_unit_cell_dims[2]
 
     # Select the correct number of atoms from the template
     positions_cart_surf = positions_cart_surf[:number_of_atoms_surf,:]
 
     # Adjust the lattice vectors for the surface unit cell (multiply the z-dimension)
     lattice_cart_surf = lattice_cart_bulk.copy()
-    lattice_cart_surf[-1, :] *= surface_unit_cell_dims[2]  # Adjust the z-dimension
+    lattice_cart_surf[-1, :] *= template_unit_cell_dims[2]  # Adjust the z-dimension
 
     # Remove the z-offset from the fractional coordinates
     positions_cart_surf = remove_z_offset(positions_cart_surf)   
