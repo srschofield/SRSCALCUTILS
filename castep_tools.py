@@ -1463,6 +1463,198 @@ def add_atoms_to_positions_frac(
     return positions_frac, new_lattice_cart
 
 
+# def create_surface_supercell_from_template(
+#     lattice_cart_bulk: np.ndarray,
+#     positions_frac_bulk: np.ndarray,
+#     positions_frac_surf: np.ndarray,
+#     n: tuple[int,int,int]
+# ) -> tuple[np.ndarray, np.ndarray]:
+#     """
+#     Build an (na x nb x nc) supercell whose bottom 1/nc is the bulk motif
+#     and whose top (z_multiple/nc) is the surface motif.
+
+#     Returns
+#     -------
+#     supercell_frac : (M*na*nb, 4) object-array
+#       Fractional [label, x,y,z] in the supercell.
+#     lattice_cart_super : (3,3) float-array
+#     The Cartesian lattice = bulk_lattice * diag(na,nb,nc).
+#     """
+#     # Get the unit cell repeat numbers
+#     na, nb, nc = n
+
+#     # Check user input - can't make a cell less that 2x in z
+#     if nc < 2:
+#         raise ValueError("n[2] (z-multiple) must be at least 2 for a surface supercell.")
+    
+#     # Get the number of atoms in the bulk and surface cells
+#     atoms_bulk = positions_frac_bulk.shape[0]
+#     atoms_surf = positions_frac_surf.shape[0]
+
+#     # Calculate the integer ratio of the bulk cell in the surface cell by atomno
+#     if atoms_surf % atoms_bulk == 0:
+#         surfbulkratio = atoms_surf // atoms_bulk
+#     else:
+#         raise ValueError("The number of atoms in the surface motif must be a multiple of the number of atoms in the bulk motif.")
+    
+#     print('atoms_surf1:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'surfbulkratio:', surfbulkratio)
+#     # Calculate the repeat numbers for surface and bulk unit cells depending on size of surface cell and repeat numbers chosen
+#     if nc > surfbulkratio:
+#         n_bulk = nc - surfbulkratio
+#     elif nc <= surfbulkratio:
+#         n_bulk = 1
+#         atoms_surf = atoms_surf - atoms_bulk * (surfbulkratio - nc +1)
+#         # make the surface fractional positions list smaller
+#         blocks = []
+#         for idx, (label, x, y, z) in enumerate(positions_frac_surf):
+#             if idx >= atoms_surf:
+#                 break
+#             blocks.append((label, x, y, z))
+#         positions_frac_surf = np.array(blocks)
+#         positions_frac_surf = remove_z_offset(positions_frac_surf, decimals=8)
+#     print('atoms_surf2:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'n_bulk:', n_bulk, 'surfbulkratio:', surfbulkratio)
+
+#     # Make sure the surface unit cell atoms are correctly ordered
+#     positions_frac_surf = sort_positions_frac(positions_frac_surf, order=['z', 'y', 'x', 'atom'])
+
+#     # Rescale the bulk coordinates. 
+#     positions_frac_bulk = [
+#         (label, x / na, y /nb, z /nc)
+#         for (label, x, y, z) in positions_frac_bulk
+#     ]   
+
+#     # Rescale the surface coordinates. 
+#     scale = surfbulkratio / nc 
+#     positions_frac_surf = [
+#         (label, x, y, z * scale)
+#         for (label, x, y, z) in positions_frac_surf
+#     ]   
+
+#     blocks = []
+#     # bulk atoms
+#     for i in range(n_bulk):
+#         for label, x, y, z in positions_frac_bulk:
+#             z_new = i / nc + z
+#             blocks.append((label, x, y, z_new))
+#     #surface atoms
+#     for idx, (label, x, y, z) in enumerate(positions_frac_surf):
+#         if idx >= atoms_surf:
+#             break
+#         z_new = (n_bulk / nc) + z
+#         blocks.append((label, x / na, y / nb, z_new))
+    
+#     positions_frac_super = np.array(blocks, dtype=object)
+    
+#     # Now calculate repeats in x and y
+#     blocks = []
+#     for i in range(na):
+#             for j in range(nb):
+#                 for label, x, y, z in positions_frac_super:
+#                     blocks.append((label, i / na + x , j / nb +y , z))
+
+#     positions_frac_super = np.array(blocks, dtype=object)
+#     positions_frac_super = sort_positions_frac(positions_frac_super, order=['z', 'y', 'x', 'atom'])
+
+#     # Calculate the final unit cell
+#     lattice_cart_super = lattice_cart_bulk.copy()
+#     lattice_cart_super[0] = lattice_cart_super[0] * na
+#     lattice_cart_super[1] = lattice_cart_super[1] * nb
+#     lattice_cart_super[2] = lattice_cart_super[2] * nc
+
+#     return lattice_cart_super, positions_frac_super
+
+
+def add_atom_at_coord_to_pos_frac(
+    positions_frac: np.array,
+    lattice_cart: np.array,
+    coord_cart: tuple[float, float, float],
+    atom: str = "Si"
+) -> np.ndarray:
+    """
+    Prepend a single atom—specified in Cartesian coordinates—to a fractional‐coordinate list.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Existing atoms, each row = [symbol (str), fx (float), fy (float), fz (float)].
+    lattice_cart : array-like, shape (3, 3)
+        Cartesian lattice vectors (rows are the unit cell vectors in Å).
+    coord_cart : length-3 tuple of floats
+        Cartesian coordinates (x, y, z) in Å of the new atom to add.
+    atom : str, optional
+        Element symbol for the new atom. Default is "Si".
+
+    Returns
+    -------
+    new_positions_frac : ndarray, shape (N+1, 4), dtype=object
+        The new atom (atom, fx, fy, fz) is inserted as the first row,
+        followed by all rows from `positions_frac` in their original order.
+        Fractional coordinates (fx, fy, fz) are computed by
+            inv(lattice_cart) @ coord_cart.
+    """
+    # Convert inputs to NumPy arrays
+    arr = np.array(positions_frac, dtype=object)
+    lat = np.array(lattice_cart, dtype=float)
+    x_cart, y_cart, z_cart = coord_cart
+
+    # Compute fractional coordinates: [fx, fy, fz] = inv(lat) @ [x, y, z]
+    inv_lat = np.linalg.inv(lat)
+    frac = inv_lat.dot(np.array([x_cart, y_cart, z_cart], dtype=float))
+    fx, fy, fz = float(frac[0]), float(frac[1]), float(frac[2])
+
+    # Build the new first row and prepend
+    new_row = [atom, fx, fy, fz]
+    new_positions_frac = np.vstack([np.array([new_row], dtype=object), arr])
+
+    return new_positions_frac
+
+
+def get_coords_of_atom_number(
+    positions_frac: np.array,
+    lattice_cart: np.array,
+    atom_number: int
+) -> tuple[float, float, float]:
+    """
+    Given a fractional‐coordinate list and the lattice, return the Cartesian coordinates
+    of the specified (1-based) atom index.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Each row = [symbol (str), fx (float), fy (float), fz (float)].
+    lattice_cart : array-like, shape (3, 3)
+        Cartesian lattice vectors (rows are unit cell vectors in Å).
+    atom_number : int
+        1-based index of the atom whose Cartesian coordinates to retrieve.
+
+    Returns
+    -------
+    (x, y, z) : tuple of floats
+        The Cartesian coordinates (in Å) of the requested atom.
+    """
+    arr = np.array(positions_frac, dtype=object)
+    lat = np.array(lattice_cart, dtype=float)
+    n_atoms = arr.shape[0]
+
+    if not (1 <= atom_number <= n_atoms):
+        raise ValueError(f"atom_number {atom_number} is out of range (1 … {n_atoms})")
+
+    # Zero-based index
+    idx = atom_number - 1
+    row = arr[idx]
+    try:
+        fx = float(row[1])
+        fy = float(row[2])
+        fz = float(row[3])
+    except Exception:
+        raise ValueError(f"Cannot parse fractional coordinates for atom #{atom_number}: {row}")
+
+    # Convert fractional → Cartesian:  (fx, fy, fz) · lattice_cart
+    x, y, z = np.dot((fx, fy, fz), lat)
+    #x, y, z = (fx, fy, fz)
+    return np.array((float(x), float(y), float(z)))
+
+
 def create_surface_supercell_from_template(
     lattice_cart_bulk: np.ndarray,
     positions_frac_bulk: np.ndarray,
@@ -1501,7 +1693,10 @@ def create_surface_supercell_from_template(
     # Calculate the repeat numbers for surface and bulk unit cells depending on size of surface cell and repeat numbers chosen
     if nc > surfbulkratio:
         n_bulk = nc - surfbulkratio
-    elif nc <= surfbulkratio:
+    elif nc == surfbulkratio:
+        print("nc==sbr")
+        n_bulk = 0
+    elif nc < surfbulkratio:
         n_bulk = 1
         atoms_surf = atoms_surf - atoms_bulk * (surfbulkratio - nc +1)
         # make the surface fractional positions list smaller
@@ -1625,51 +1820,78 @@ def create_vacuum_spacing(
     return new_positions_frac, new_L
 
 
-def sort_positions_frac(arr: np.ndarray,
-                        order: list[str] = ['z', 'y', 'x', 'atom'],
-                        descending: bool = True) -> np.ndarray:
-    """
-    Sorts an array of shape (N, 4) with dtype=object based on specified fields.
+# def sort_positions_frac(arr: np.ndarray,
+#                         order: list[str] = ['z', 'y', 'x', 'atom'],
+#                         descending: bool = True) -> np.ndarray:
+#     """
+#     Sorts an array of shape (N, 4) with dtype=object based on specified fields.
 
-    Parameters
-    ----------
-    arr : np.ndarray
-        Input array of shape (N, 4), with columns ['atom', 'x', 'y', 'z'] and dtype=object.
-    order : list[str], optional
-        List of field names to sort by, in priority order (highest first).
-        Supported names: 'atom', 'x', 'y', 'z'. Defaults to ['z', 'y', 'x', 'atom'].
-    descending : bool, optional
-        If True, sort from highest to lowest along the specified order;
-        if False, sort from lowest to highest. Default is False.
+#     Parameters
+#     ----------
+#     arr : np.ndarray
+#         Input array of shape (N, 4), with columns ['atom', 'x', 'y', 'z'] and dtype=object.
+#     order : list[str], optional
+#         List of field names to sort by, in priority order (highest first).
+#         Supported names: 'atom', 'x', 'y', 'z'. Defaults to ['z', 'y', 'x', 'atom'].
+#     descending : bool, optional
+#         If True, sort from highest to lowest along the specified order;
+#         if False, sort from lowest to highest. Default is False.
 
-    Returns
-    -------
-    np.ndarray
-        New sorted array of the same shape and dtype.
-    """
-    # Supported fields for sorting
-    FIELD_INDICES = {
-        'atom': 0,
-        'x': 1,
-        'y': 2,
-        'z': 3,
-    }
-    # Validate order list
-    for field in order:
-        if field not in FIELD_INDICES:
-            raise ValueError(f"Unsupported sort field: {field}. "
-                             f"Choose from {list(FIELD_INDICES.keys())}.")
+#     Returns
+#     -------
+#     np.ndarray
+#         New sorted array of the same shape and dtype.
+#     """
+#     # Supported fields for sorting
+#     FIELD_INDICES = {
+#         'atom': 0,
+#         'x': 1,
+#         'y': 2,
+#         'z': 3,
+#     }
+#     # Validate order list
+#     for field in order:
+#         if field not in FIELD_INDICES:
+#             raise ValueError(f"Unsupported sort field: {field}. "
+#                              f"Choose from {list(FIELD_INDICES.keys())}.")
 
-    # Convert to list of rows for sorting
-    rows = arr.tolist()
+#     # Convert to list of rows for sorting
+#     rows = arr.tolist()
 
-    # Create a tuple key based on requested fields
-    def sort_key(row: list) -> tuple:
-        return tuple(row[FIELD_INDICES[f]] for f in order)
+#     # Create a tuple key based on requested fields
+#     def sort_key(row: list) -> tuple:
+#         return tuple(row[FIELD_INDICES[f]] for f in order)
 
-    # Sort and return; reverse if descending
-    rows_sorted = sorted(rows, key=sort_key, reverse=descending)
-    return np.array(rows_sorted, dtype=object)
+#     # Sort and return; reverse if descending
+#     rows_sorted = sorted(rows, key=sort_key, reverse=descending)
+#     return np.array(rows_sorted, dtype=object)
+
+
+# def sort_positions_frac(arr, 
+#                         order  = ['z','y','x','atom'], 
+#                         ascending = [False, True, True, True]) -> np.ndarray:
+#     """
+#     Sorts shape-(N,4) array (columns = ['atom','x','y','z']) by a list of fields.
+#     Each field can be ascending (True) or descending (False).  
+#     This never breaks a row—each row stays intact.
+#     """
+#     FIELD_INDICES = {'atom': 0, 'x': 1, 'y': 2, 'z': 3}
+
+#     # Validate
+#     if len(order) != len(ascending):
+#         raise ValueError("`order` and `ascending` must be the same length.")
+
+#     rows = arr.tolist()  # each row is still exactly [atom, x, y, z]
+
+#     # We do a stable sort for each key, going from lowest‐priority → highest‐priority.
+#     # That way, the final pass (highest‐priority key) dictates the top‐level grouping,
+#     # but ties at each step preserve the previous ordering (so rows never get split).
+#     for field, ascend_flag in reversed(list(zip(order, ascending))):
+#         idx = FIELD_INDICES[field]
+#         rows.sort(key=lambda r: r[idx], reverse=(not ascend_flag))
+#         # ‣ r[idx] is always one row’s field.  We never move r[0] away from r[1], etc.
+
+#     return np.array(rows, dtype=object)
 
 
 def remove_z_offset(positions_frac, decimals=7):
@@ -1709,6 +1931,86 @@ def remove_z_offset(positions_frac, decimals=7):
     out[:, 1:] = coords
 
     return out
+
+
+def sort_positions_frac(
+    arr: np.ndarray,
+    order: list[str]      = ['z', 'x', 'y', 'atom'],
+    descending: list[bool] = [True, False, False, True],
+    tol: float            = 0.001
+) -> np.ndarray:
+    """
+    Sort an (N,4) array of dtype=object (columns = ['atom','x','y','z'])
+    by a custom priority list `order`, allowing per-field ascending/descending,
+    and snapping x/y/z to bins of size = tol.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of shape (N,4), dtype=object, columns = ['atom','x','y','z'].
+    order : list[str], optional
+        Priority order of fields to sort by.  Each must be one of
+        'atom', 'x', 'y', 'z'.  (Highest‐priority first.)
+        Default = ['z','y','x','atom'].
+    descending : list[bool], optional
+        List of the same length as `order`.  If descending[i] is True,
+        then field `order[i]` is sorted from largest→smallest; if False,
+        it’s sorted smallest→largest.  If None, defaults to [True]*len(order).
+    tol : float, optional
+        All numeric fields ('x','y','z') are quantized by:
+            bin = round(value / tol)
+        so that any two values within ~tol/2 fall into the same integer bin.
+        Default = 0.001.
+
+    Returns
+    -------
+    np.ndarray
+        New (N,4) array, dtype=object, with the same rows as `arr` but
+        permuted so that they’re sorted (with tolerance) according to each
+        field in `order`, using the corresponding descending[i].
+    """
+
+    # 1) Map field names → column indices
+    FIELD_INDICES = {'atom': 0, 'x': 1, 'y': 2, 'z': 3}
+
+    # 2) Validate `order`
+    for fld in order:
+        if fld not in FIELD_INDICES:
+            raise ValueError(f"Unsupported sort field: {fld!r}.  Choose from {list(FIELD_INDICES)}.")
+
+    # 3) Build or validate `descending`
+    if descending is None:
+        descending = [True] * len(order)
+    if len(descending) != len(order):
+        raise ValueError("`descending` must have the same length as `order`.")
+
+    # 4) Validate `tol`
+    if tol <= 0:
+        raise ValueError("`tol` must be positive.")
+
+    # 5) Convert arr → list of rows so we can sort in‐place
+    rows = arr.tolist()  # each row is like ['C', 0.123, 0.456, 0.789]
+
+    # 6) Do a stable sort on each key in REVERSE priority order.
+    #    That way, the last pass is the highest‐priority key.
+    for fld, desc_flag in reversed(list(zip(order, descending))):
+        idx = FIELD_INDICES[fld]
+
+        if fld in ('x', 'y', 'z'):
+            # Numeric column → quantize by tol, then sort by that integer‐bin
+            rows.sort(
+                key = lambda r: round(float(r[idx]) / tol),
+                reverse = desc_flag
+            )
+        else:
+            # 'atom' column → sort by string directly
+            rows.sort(
+                key = lambda r: r[idx],
+                reverse = desc_flag
+            )
+
+    # 7) Pack back into an (N,4) array, dtype=object
+    return np.array(rows, dtype=object)
 
 
 
@@ -1906,6 +2208,86 @@ def select_atoms_by_region(positions_frac, lattice_cart, condition,
                 )
         py_fracs = [float(v) for v in fcoords]
         output.append([idx+1, is_sel, atom, *py_fracs])
+
+    return np.array(output, dtype=object)
+
+
+def select_atoms_by_number(positions_frac: np.array, number_spec: str) -> np.ndarray:
+    """
+    Select atoms by the index they occur in the file (1-based), using a specification string.
+    The specification can be:
+      - A single index, e.g. "5"
+      - A comma-separated list of indices, e.g. "4,5,6"
+      - A range, e.g. "4-5"
+      - A combination of commas and ranges, e.g. "3,5-9,12"
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        Each row is [element_symbol, frac_x, frac_y, frac_z], dtype=object or convertible.
+    number_spec : str
+        A string specifying which 1-based atom indices to select, using commas and/or hyphens.
+
+    Returns
+    -------
+    result : ndarray, shape (N, 6), dtype=object
+        Columns:
+          [ index (int, 1-based),
+            is_selected (bool),
+            element_symbol (str),
+            frac_x (float),
+            frac_y (float),
+            frac_z (float) ]
+        Rows appear in the same order as `positions_frac`.  `is_selected` is True
+        if that atom’s (1-based) index falls into `number_spec`, otherwise False.
+    """
+    arr = np.array(positions_frac, dtype=object)
+    n_atoms = arr.shape[0]
+
+    def build_index_set(spec: str) -> set[int]:
+        """
+        Parse a specification string like "3,5-9,12" into a set of zero-based indices.
+        """
+        s = set()
+        for token in spec.split(','):
+            token = token.strip()
+            if not token:
+                continue
+            if '-' in token:
+                try:
+                    start_str, end_str = token.split('-', 1)
+                    i0 = int(start_str)
+                    i1 = int(end_str)
+                except ValueError:
+                    raise ValueError(f"Invalid range specifier '{token}'. Use 'start-end' with integers.")
+                if i0 < 1 or i1 < 1 or i0 > i1:
+                    raise ValueError(f"Invalid range '{token}': indices must be positive and start ≤ end.")
+                # Convert to zero-based
+                for i in range(i0, i1 + 1):
+                    s.add(i - 1)
+            else:
+                # Single index
+                try:
+                    idx = int(token)
+                except ValueError:
+                    raise ValueError(f"Invalid index specifier '{token}'. Must be an integer or a range.")
+                if idx < 1:
+                    raise ValueError(f"Invalid atom index '{idx}': indices must be ≥ 1.")
+                s.add(idx - 1)
+        # Filter out-of-bounds silently (or you could raise an error)
+        return {i for i in s if 0 <= i < n_atoms}
+
+    selected_set = build_index_set(number_spec)
+
+    output = []
+    for idx, row in enumerate(arr):
+        atom = row[0]
+        try:
+            fx, fy, fz = float(row[1]), float(row[2]), float(row[3])
+        except Exception:
+            raise ValueError(f"Cannot convert fractional coordinates to float on row {idx+1}: {row[1:]}")
+        is_sel = (idx in selected_set)
+        output.append([idx + 1, is_sel, atom, fx, fy, fz])
 
     return np.array(output, dtype=object)
 
