@@ -13,7 +13,6 @@ Created May 2025
 """
 # ============================================================================
 #region Module dependencies
-# ============================================================================
 
 import os
 import re
@@ -32,14 +31,12 @@ from typing import List, Union, Tuple, Any
 from IPython.display import display, Image as StaticImage
 import time
 
-# ============================================================================
 #endregion Module dependencies
 # ============================================================================
 
 
 # ============================================================================
 #region Basic file io and handling
-# ============================================================================
 
 def find_all_files_by_extension(root_dir, extension=".castep"):
     """
@@ -229,14 +226,12 @@ def sort_file_list(file_list):
     return sorted(file_list, key=natural_key)
 
 
-# ============================================================================
 #endregion Basic file io and handling
 # ============================================================================
 
 
 # ============================================================================
 #region Get information from .castep files
-# ============================================================================
 
 
 def get_warnings(castep_path, verbose=True):
@@ -771,15 +766,12 @@ def fractional_coords_from_castep(castep_path):
     
     return atoms 
 
-
-# ============================================================================
 #endregion Get information from .castep files
 # ============================================================================
 
 
 # ============================================================================
 #region Plotting and visualization functions
-# ============================================================================
 
 def print_filename(castep_path):
     """
@@ -877,14 +869,12 @@ def plot_sequence(
     plt.show()
 
 
-# ============================================================================
 #endregion Plotting and visualization functions
 # ============================================================================
 
         
 # ============================================================================
 #region Writing CASTEP input files
-# ============================================================================
 
 def write_block_lattice_cart(lattice_cart):
     """
@@ -1263,15 +1253,12 @@ def write_xyz(positions_cart, path='.', filename='castep_input', comment=None):
 
     return xyz_str
 
-
-# ============================================================================
 #endregion Writing CASTEP input files
 # ============================================================================
 
 
 # ============================================================================
 #region Manipulate arrays, lists, coordinates, and cells. 
-# ============================================================================
 
 def show_only_true(data):
     """
@@ -1520,107 +1507,6 @@ def add_atoms_to_positions_frac(
             new_lattice_cart[i] = vec * (1.0 + abs(shift_frac[i]))
 
     return positions_frac, new_lattice_cart
-
-
-# def create_surface_supercell_from_template(
-#     lattice_cart_bulk: np.ndarray,
-#     positions_frac_bulk: np.ndarray,
-#     positions_frac_surf: np.ndarray,
-#     n: tuple[int,int,int]
-# ) -> tuple[np.ndarray, np.ndarray]:
-#     """
-#     Build an (na x nb x nc) supercell whose bottom 1/nc is the bulk motif
-#     and whose top (z_multiple/nc) is the surface motif.
-
-#     Returns
-#     -------
-#     supercell_frac : (M*na*nb, 4) object-array
-#       Fractional [label, x,y,z] in the supercell.
-#     lattice_cart_super : (3,3) float-array
-#     The Cartesian lattice = bulk_lattice * diag(na,nb,nc).
-#     """
-#     # Get the unit cell repeat numbers
-#     na, nb, nc = n
-
-#     # Check user input - can't make a cell less that 2x in z
-#     if nc < 2:
-#         raise ValueError("n[2] (z-multiple) must be at least 2 for a surface supercell.")
-    
-#     # Get the number of atoms in the bulk and surface cells
-#     atoms_bulk = positions_frac_bulk.shape[0]
-#     atoms_surf = positions_frac_surf.shape[0]
-
-#     # Calculate the integer ratio of the bulk cell in the surface cell by atomno
-#     if atoms_surf % atoms_bulk == 0:
-#         surfbulkratio = atoms_surf // atoms_bulk
-#     else:
-#         raise ValueError("The number of atoms in the surface motif must be a multiple of the number of atoms in the bulk motif.")
-    
-#     print('atoms_surf1:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'surfbulkratio:', surfbulkratio)
-#     # Calculate the repeat numbers for surface and bulk unit cells depending on size of surface cell and repeat numbers chosen
-#     if nc > surfbulkratio:
-#         n_bulk = nc - surfbulkratio
-#     elif nc <= surfbulkratio:
-#         n_bulk = 1
-#         atoms_surf = atoms_surf - atoms_bulk * (surfbulkratio - nc +1)
-#         # make the surface fractional positions list smaller
-#         blocks = []
-#         for idx, (label, x, y, z) in enumerate(positions_frac_surf):
-#             if idx >= atoms_surf:
-#                 break
-#             blocks.append((label, x, y, z))
-#         positions_frac_surf = np.array(blocks)
-#         positions_frac_surf = remove_z_offset(positions_frac_surf, decimals=8)
-#     print('atoms_surf2:', atoms_surf, 'atoms_bulk:', atoms_bulk, 'n_bulk:', n_bulk, 'surfbulkratio:', surfbulkratio)
-
-#     # Make sure the surface unit cell atoms are correctly ordered
-#     positions_frac_surf = sort_positions_frac(positions_frac_surf, order=['z', 'y', 'x', 'atom'])
-
-#     # Rescale the bulk coordinates. 
-#     positions_frac_bulk = [
-#         (label, x / na, y /nb, z /nc)
-#         for (label, x, y, z) in positions_frac_bulk
-#     ]   
-
-#     # Rescale the surface coordinates. 
-#     scale = surfbulkratio / nc 
-#     positions_frac_surf = [
-#         (label, x, y, z * scale)
-#         for (label, x, y, z) in positions_frac_surf
-#     ]   
-
-#     blocks = []
-#     # bulk atoms
-#     for i in range(n_bulk):
-#         for label, x, y, z in positions_frac_bulk:
-#             z_new = i / nc + z
-#             blocks.append((label, x, y, z_new))
-#     #surface atoms
-#     for idx, (label, x, y, z) in enumerate(positions_frac_surf):
-#         if idx >= atoms_surf:
-#             break
-#         z_new = (n_bulk / nc) + z
-#         blocks.append((label, x / na, y / nb, z_new))
-    
-#     positions_frac_super = np.array(blocks, dtype=object)
-    
-#     # Now calculate repeats in x and y
-#     blocks = []
-#     for i in range(na):
-#             for j in range(nb):
-#                 for label, x, y, z in positions_frac_super:
-#                     blocks.append((label, i / na + x , j / nb +y , z))
-
-#     positions_frac_super = np.array(blocks, dtype=object)
-#     positions_frac_super = sort_positions_frac(positions_frac_super, order=['z', 'y', 'x', 'atom'])
-
-#     # Calculate the final unit cell
-#     lattice_cart_super = lattice_cart_bulk.copy()
-#     lattice_cart_super[0] = lattice_cart_super[0] * na
-#     lattice_cart_super[1] = lattice_cart_super[1] * nb
-#     lattice_cart_super[2] = lattice_cart_super[2] * nc
-
-#     return lattice_cart_super, positions_frac_super
 
 
 def add_atom_at_coord_to_pos_frac(
@@ -1877,80 +1763,6 @@ def create_vacuum_spacing(
     new_positions_frac[:, 1:] = new_coords
 
     return new_positions_frac, new_L
-
-
-# def sort_positions_frac(arr: np.ndarray,
-#                         order: list[str] = ['z', 'y', 'x', 'atom'],
-#                         descending: bool = True) -> np.ndarray:
-#     """
-#     Sorts an array of shape (N, 4) with dtype=object based on specified fields.
-
-#     Parameters
-#     ----------
-#     arr : np.ndarray
-#         Input array of shape (N, 4), with columns ['atom', 'x', 'y', 'z'] and dtype=object.
-#     order : list[str], optional
-#         List of field names to sort by, in priority order (highest first).
-#         Supported names: 'atom', 'x', 'y', 'z'. Defaults to ['z', 'y', 'x', 'atom'].
-#     descending : bool, optional
-#         If True, sort from highest to lowest along the specified order;
-#         if False, sort from lowest to highest. Default is False.
-
-#     Returns
-#     -------
-#     np.ndarray
-#         New sorted array of the same shape and dtype.
-#     """
-#     # Supported fields for sorting
-#     FIELD_INDICES = {
-#         'atom': 0,
-#         'x': 1,
-#         'y': 2,
-#         'z': 3,
-#     }
-#     # Validate order list
-#     for field in order:
-#         if field not in FIELD_INDICES:
-#             raise ValueError(f"Unsupported sort field: {field}. "
-#                              f"Choose from {list(FIELD_INDICES.keys())}.")
-
-#     # Convert to list of rows for sorting
-#     rows = arr.tolist()
-
-#     # Create a tuple key based on requested fields
-#     def sort_key(row: list) -> tuple:
-#         return tuple(row[FIELD_INDICES[f]] for f in order)
-
-#     # Sort and return; reverse if descending
-#     rows_sorted = sorted(rows, key=sort_key, reverse=descending)
-#     return np.array(rows_sorted, dtype=object)
-
-
-# def sort_positions_frac(arr, 
-#                         order  = ['z','y','x','atom'], 
-#                         ascending = [False, True, True, True]) -> np.ndarray:
-#     """
-#     Sorts shape-(N,4) array (columns = ['atom','x','y','z']) by a list of fields.
-#     Each field can be ascending (True) or descending (False).  
-#     This never breaks a row—each row stays intact.
-#     """
-#     FIELD_INDICES = {'atom': 0, 'x': 1, 'y': 2, 'z': 3}
-
-#     # Validate
-#     if len(order) != len(ascending):
-#         raise ValueError("`order` and `ascending` must be the same length.")
-
-#     rows = arr.tolist()  # each row is still exactly [atom, x, y, z]
-
-#     # We do a stable sort for each key, going from lowest‐priority → highest‐priority.
-#     # That way, the final pass (highest‐priority key) dictates the top‐level grouping,
-#     # but ties at each step preserve the previous ordering (so rows never get split).
-#     for field, ascend_flag in reversed(list(zip(order, ascending))):
-#         idx = FIELD_INDICES[field]
-#         rows.sort(key=lambda r: r[idx], reverse=(not ascend_flag))
-#         # ‣ r[idx] is always one row’s field.  We never move r[0] away from r[1], etc.
-
-#     return np.array(rows, dtype=object)
 
 
 def remove_z_offset(positions_frac, decimals=7):
@@ -2824,15 +2636,13 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
 
     return float(plane_cart), float(plane_frac)
 
-
-# ============================================================================
 #endregion Manipulate arrays, lists, coordinates, and cells. 
 # ============================================================================
 
 
 # ============================================================================
-#region Generate APOLLO job submission scripts
-# ============================================================================
+#region Generate cluster job submission scripts
+
 
 def write_job_script(
     path,
@@ -2954,14 +2764,13 @@ mpirun -np {n_ranks} castep.mpi {filename}
     return job_file
 
 
-# ============================================================================
-#endregion Generate APOLLO job submission scripts
+#endregion Generate cluster job submission scripts
 # ============================================================================
 
 
 # ============================================================================
 #region MACRO like functiond
-# ============================================================================
+
 def collect_summary_table(data_path):
     """
     Scans all .castep files under data_path and builds a summary table with:
@@ -3050,6 +2859,6 @@ def optimisation_summary_macro_1(castep_paths):
         img = view.render_image(frame=None, factor=4, antialias=True, trim=False, transparent=False)
         display(img)
 
-# ============================================================================
+
 #endregion Generate APOLLO job submission scripts
 # ============================================================================
