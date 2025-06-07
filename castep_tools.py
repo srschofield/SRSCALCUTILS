@@ -427,6 +427,65 @@ def get_LBFGS_final_enthalpy(castep_path):
         return float('nan')  # or return None
 
 
+def get_calc_time_and_peak_memory(castep_path):
+    """
+    Extracts the calculation time and peak memory use (with their units) from a .castep output file.
+
+    Looks for lines like:
+      Calculation time    =   4935.16 s
+      Peak Memory Use     = 142424116 kB
+
+    Returns:
+        tuple: (calc_time_val, calc_time_unit, peak_mem_val, peak_mem_unit)
+               Each value is a float (or NaN if missing/ambiguous).
+               Each unit is the exact string found (or '' if missing/ambiguous).
+    """
+    # regex to capture number and unit
+    time_pat = re.compile(
+        r'Calculation time\s*=\s*([-+]?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)\s*([a-zA-Z%]+)'
+    )
+    mem_pat = re.compile(
+        r'Peak Memory Use\s*=\s*([-+]?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)\s*([a-zA-Z%]+)',
+        re.IGNORECASE
+    )
+
+    times = []
+    mems = []
+
+    try:
+        with open(castep_path, 'r') as f:
+            for line in f:
+                tm = time_pat.search(line)
+                if tm:
+                    val = float(tm.group(1))
+                    unit = tm.group(2)
+                    times.append((val, unit))
+
+                mm = mem_pat.search(line)
+                if mm:
+                    val = float(mm.group(1))
+                    unit = mm.group(2)
+                    mems.append((val, unit))
+
+        # Validate that exactly one match was found for each
+        if len(times) == 1:
+            calc_time_val, calc_time_unit = times[0]
+        else:
+            calc_time_val, calc_time_unit = float('nan'), ''
+
+        if len(mems) == 1:
+            peak_mem_val, peak_mem_unit = mems[0]
+        else:
+            peak_mem_val, peak_mem_unit = float('nan'), ''
+
+        return calc_time_val, calc_time_unit, peak_mem_val, peak_mem_unit
+
+    except Exception:
+        # On any error, return NaNs and empty units
+        return float('nan'), '', float('nan'), ''
+
+
+
 def get_lattice_parameters(castep_path):
     """
     Parse a CASTEP output file and extract, for each 'Unit Cell' block:
@@ -2783,7 +2842,7 @@ def write_job_script(
     available_cores=192,
     available_memory='1024G',
     threads=1,
-    safety_factor=0.98,
+    safety_factor=0.95,
     display_file=False
 ):
     """
