@@ -120,6 +120,95 @@ def read_positions_frac(path, filename):
     return positions_frac, lattice_cart
 
 
+def read_param_file(path, filename):
+    """
+    Read a key : value file at os.path.join(path, filename) and return a dict with:
+      - keys normalized to lowercase with underscores
+      - values converted to int, float, or bool when possible
+      - all other values kept as stripped strings
+    Skips blank lines, lines starting with '#' or '!'.
+    """
+    full_path = os.path.join(path, filename)
+    if not os.path.isfile(full_path):
+        raise FileNotFoundError(f"No such file: '{full_path}'")
+
+    params = {}
+    with open(full_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            # skip blank lines or comments
+            if not line or line.startswith('#') or line.startswith('!'):
+                continue
+            if ':' not in line:
+                continue
+
+            raw_key, raw_val = line.split(':', 1)
+            # normalize key
+            key = raw_key.strip().lower().replace(' ', '_').replace('-', '_')
+            val_str = raw_val.strip()
+
+            # boolean?
+            val_low = val_str.lower()
+            if val_low in ('true', 'false'):
+                params[key] = (val_low == 'true')
+                continue
+
+            # int or float?
+            try:
+                if val_str.isdigit():
+                    params[key] = int(val_str)
+                else:
+                    params[key] = float(val_str)
+                continue
+            except ValueError:
+                pass
+
+            # fallback: keep string
+            params[key] = val_str
+
+    return params
+
+
+def read_k_points(path, filename):
+    """
+    Read a file at os.path.join(path, filename), look for a line like:
+        KPOINTS_MP_GRID : 3 1 2
+    or
+        KPOINT_MP_GRID : 3 1 2
+    (case‐insensitive on the key), skipping blank lines and lines that start
+    with '#' or '!'. Returns the tuple (3, 1, 2).
+    """
+    full_path = os.path.join(path, filename)
+    if not os.path.isfile(full_path):
+        raise FileNotFoundError(f"No such file: '{full_path}'")
+
+    with open(full_path, 'r') as f:
+        for line in f:
+            raw = line.strip()
+            if not raw or raw.startswith('#') or raw.startswith('!'):
+                continue
+
+            # strip off any inline comments
+            content = raw.split('#', 1)[0].split('!', 1)[0].strip()
+            if not content:
+                continue
+
+            key, sep, rest = content.partition(':')
+            key_lower = key.strip().lower()
+            if sep and key_lower in ('kpoint_mp_grid', 'kpoints_mp_grid'):
+                parts = rest.strip().split()
+                if len(parts) >= 3:
+                    try:
+                        return tuple(int(x) for x in parts[:3])
+                    except ValueError:
+                        raise ValueError(f"Could not parse integers from '{rest.strip()}'")
+                else:
+                    raise ValueError(f"Found {key.strip()} but not 3 values: '{rest.strip()}'")
+
+    raise ValueError("No valid 'kpoint(s)_mp_grid : a b c' line found in file")
+
+
+
 def read_positions_frac_from_template(
         path=".",
         filename="filename", 
@@ -965,7 +1054,7 @@ def write_positions_frac(
         ], dtype=object)
 
     # Build text block
-    if header == "intermetiate":
+    if header == "intermediate":
         lines = ["%BLOCK positions_frac_intermediate"]
     elif header == "product":
         lines = ["%BLOCK positions_frac_product"]
@@ -975,7 +1064,7 @@ def write_positions_frac(
     for atom_label, x, y, z in positions_frac:
         lines.append(f"   {atom_label:2s}   {float(x):16.10f}{float(y):16.10f}{float(z):16.10f}")
     
-    if header == "intermetiate":
+    if header == "intermediate":
         lines.append("%ENDBLOCK positions_frac_intermediate")
     elif header == "product":
         lines.append("%ENDBLOCK positions_frac_product")
