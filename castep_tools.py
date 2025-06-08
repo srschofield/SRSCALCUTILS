@@ -2763,6 +2763,65 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
 
     return float(plane_cart), float(plane_frac)
 
+def compute_positions_frac_intermediate(positions_frac, positions_frac_product, m=0.35):
+    """
+    Linearly interpolate between two arrays of fractional coordinates.
+
+    Parameters
+    ----------
+    positions_frac : array-like, shape (N, 4)
+        First column is element symbol (string), next three are x, y, z floats.
+    positions_frac_product : array-like, shape (N, 4)
+        Same format as `positions_frac`.
+    m : float, optional
+        Interpolation parameter in [0,1].  Default is 0.35.
+
+    Returns
+    -------
+    positions_frac_intermediate : ndarray, shape (N, 4), dtype object
+        First column is the element symbols (same as inputs),
+        next three are the interpolated coordinates.
+
+    Raises
+    ------
+    ValueError
+        If the two inputs do not have the same shape, or if their
+        element columns disagree.
+    """
+    # Convert to object arrays (in case inputs are lists)
+    A = np.asarray(positions_frac, dtype=object)
+    B = np.asarray(positions_frac_product, dtype=object)
+
+    # 1) shape check
+    if A.shape != B.shape:
+        raise ValueError(f"Input arrays must have the same shape; "
+                         f"got {A.shape} vs {B.shape}")
+
+    # 2) element‐symbol check
+    symA = A[:, 0]
+    symB = B[:, 0]
+    # find any mismatches
+    diff = symA != symB
+    if np.any(diff):
+        idx = np.nonzero(diff)[0][0]
+        raise ValueError(f"Elemental composition mismatch at row {idx}: "
+                         f"{symA[idx]!r} vs {symB[idx]!r}")
+
+    # 3) extract and interpolate coordinates
+    coordsA = A[:, 1:].astype(float)
+    coordsB = B[:, 1:].astype(float)
+
+    # x_new = m * x + (1-m) * x_product
+    coords_new = m * coordsA + (1.0 - m) * coordsB
+
+    # 4) build output array
+    out = np.empty_like(A, dtype=object)
+    out[:, 0] = symA
+    out[:, 1:] = coords_new
+
+    return out
+
+
 #endregion Manipulate arrays, lists, coordinates, and cells. 
 # ============================================================================
 
