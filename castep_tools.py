@@ -14,22 +14,57 @@ Created May 2025
 # ============================================================================
 #region Module dependencies
 
+# --- stdlib ---
 import os
-import re
 import sys
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
+import re
+import time
 import math
-from ase import Atoms
-import nglview as nv        # pip install nglview
+import warnings
+from pathlib import Path
+from shutil import which
 from collections import defaultdict
 from typing import List, Union, Tuple, Any
 
-
+# --- third-party ---
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from ase import Atoms
+from ase.calculators.castep import Castep
+from ase.mep import NEBTools             # updated per ASE 3.23+
+import nglview as nv                     # pip install nglview
 from IPython.display import display, Image as StaticImage
-import time
+
+# --- CASTEP specific ---
+# make sure ‘readts’ (Utilities/readts/) is on PYTHONPATH
+from readts import TSFile
+
+# ------------------------------------------------------------
+# CASTEP binary configuration & sanity check
+# ------------------------------------------------------------
+# Default path (override via env var if you like)
+DEFAULT_CASTEP = "/usr/local/bin/castep"
+
+# Pick up user’s CASTEP_COMMAND or fall back
+castep_cmd = os.environ.get("CASTEP_COMMAND", DEFAULT_CASTEP)
+
+# Check it exists and is executable, or find it on PATH
+if not Path(castep_cmd).is_file() and which(castep_cmd) is None:
+    warnings.warn(
+        f"CASTEP binary not found at '{castep_cmd}'.\n"
+        "Please install CASTEP or set the CASTEP_COMMAND environment variable\n"
+        "to the full path of your castep executable.",
+        stacklevel=2
+    )
+else:
+    # export so ASE picks it up
+    os.environ["CASTEP_COMMAND"] = castep_cmd
+
+# ------------------------------------------------------------
+# Instantiate your default calculator
+# ------------------------------------------------------------
+calc = Castep(label="myjob", command=castep_cmd)
 
 #endregion Module dependencies
 # ============================================================================
@@ -956,6 +991,111 @@ def plot_sequence(
         plt.title(title)
     plt.tight_layout()
     plt.show()
+
+
+def get_neb_calculation_results(seedname, path='.', tolerant=False):
+    """
+    Load a CASTEP .ts file and extract:
+      - images: list of ASE Atoms objects along the NEB path
+      - energies: tuple (barrier_height, E_final - E_initial)
+      - per-image energies: list of floats
+    
+    Args:
+      seedname (str): basename of your TS file (without extension)
+      path (str): directory containing the .ts file
+      tolerant (bool): pass through to TSFile
+    
+    Returns:
+      dict with keys:
+        images, barrier, delta_E, energies_per_image
+    """
+    ts = TSFile(seedname, path=path, tolerant=tolerant)
+    # initial and final from REA/PRO blocks
+    reac, prod = ts.blocks['REA'][1][0].atoms, ts.blocks['PRO'][1][0].atoms
+    # all transit states
+    tst = ts.blocks['TST']
+    max_idx = tst.last_index
+    nbeads = len(tst[1])
+    images = [reac] + [tst[max_idx][i].atoms for i in range(nbeads)] + [prod]
+    
+    nt = NEBTools(images)
+    barrier, delta_E = nt.get_barrier()
+    energies_per_image = [img.get_potential_energy() for img in images]
+    
+    return images, energies_per_image, barrier, delta_E
+    
+
+def plot_neb_results(energies_per_image, barrier=None, delta_E=None, ax=None):
+    """
+    Plot the NEB energy profile inline.
+    
+    Args:
+      energies_per_image (list of float): energies along the path
+      barrier (float, optional): barrier height to annotate
+      delta_E (float, optional): E_final - E_initial to annotate
+      ax (matplotlib.axes.Axes, optional): if you want to supply your own Axes
+    
+    Returns:
+      matplotlib.axes.Axes
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6,4))
+    x = list(range(len(energies_per_image)))
+    ax.plot(x, energies_per_image, marker='o')
+    ax.set_xlabel('Image index')
+    ax.set_ylabel('Energy (eV)')
+    ax.set_title('NEB energy profile')
+    if barrier is not None:
+        ax.annotate(f'Barrier = {barrier:.3f} eV',
+                    xy=(x[energies_per_image.index(max(energies_per_image))],
+                        max(energies_per_image)),
+                    xytext=(0.6, 0.9), textcoords='axes fraction')
+    if delta_E is not None:
+        ax.text(0.02, 0.9, f'ΔE = {delta_E:.3f} eV',
+                transform=ax.transAxes)
+    plt.tight_layout()
+    return ax
+
+
+# from pathlib import Path
+# from typing import Union, List
+# from ase import Atoms
+from ase.io import write
+
+def save_xyz_movie_from_ts_images(
+    images: List[Atoms],
+    out_dir: Union[str, Path],
+    base_name: str
+) -> Path:
+    """
+    Save a sequence of ASE Atoms objects as an .xyz “movie” file.
+
+    Parameters
+    ----------
+    images
+        List of ASE Atoms objects (e.g. from TSFile.images or NEBTools.images).
+    out_dir
+        Directory in which to write the file. Will be created if it doesn’t exist.
+    base_name
+        Filename without extension. The output will be `<base_name>_movie.xyz`.
+
+    Returns
+    -------
+    Path
+        The full path to the written .xyz file.
+    """
+    # Ensure output directory exists
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Construct output filename
+    out_fname = f"{base_name}_movie.xyz"
+    out_path = out_dir / out_fname
+
+    # Write the trajectory
+    write(str(out_path), images)   # ASE infers XYZ from extension
+
+    return out_path
 
 
 #endregion Plotting and visualization functions
@@ -2762,6 +2902,7 @@ def find_plane_value(positions_frac, lattice_cart, axis, criteria):
     plane_cart = plane_frac * np.linalg.norm(cell_vec)
 
     return float(plane_cart), float(plane_frac)
+
 
 def compute_positions_frac_intermediate(positions_frac, positions_frac_product, m=0.35):
     """
