@@ -44,7 +44,8 @@ from readts import TSFile
 # CASTEP binary configuration & sanity check
 # ------------------------------------------------------------
 # Default path (override via env var if you like)
-DEFAULT_CASTEP = "/usr/local/bin/castep"
+#DEFAULT_CASTEP = "/usr/local/bin/castep"
+DEFAULT_CASTEP = "/usr/local/CASTEP-24.1/bin/darwin_arm64_gfortran10--serial/castep.serial"
 
 # Pick up user’s CASTEP_COMMAND or fall back
 castep_cmd = os.environ.get("CASTEP_COMMAND", DEFAULT_CASTEP)
@@ -61,10 +62,10 @@ else:
     # export so ASE picks it up
     os.environ["CASTEP_COMMAND"] = castep_cmd
 
-# ------------------------------------------------------------
-# Instantiate your default calculator
-# ------------------------------------------------------------
-calc = Castep(label="myjob", command=castep_cmd)
+# # ------------------------------------------------------------
+# # Instantiate your default calculator
+# # ------------------------------------------------------------
+# calc = Castep(label="myjob", command=castep_cmd)
 
 #endregion Module dependencies
 # ============================================================================
@@ -422,6 +423,51 @@ def get_warnings(castep_path, verbose=True):
         output_lines.append(f"  full path: {full_path}")
 
     return "\n".join(output_lines)
+
+
+def get_convergence_iterations(path, filename):
+    """
+    Searches for a convergence line in the given file and returns the number of iterations.
+    If convergence is not reached, returns a message with the last completed iteration.
+
+    Parameters:
+    - path: directory containing the file
+    - filename: name of the file to search
+
+    Returns:
+    - int: number of iterations if convergence line is found
+    - str: message "Not converged. Last completed iteration = X." if no convergence line is present
+    """
+    # Construct full file path
+    file_path = os.path.join(path, filename)
+
+    # Patterns for convergence and iteration lines
+    convergence_pattern = re.compile(r'Convergence achieved in\s+(\d+)\s+iterations')
+    iteration_pattern   = re.compile(r'Iteration:\s+(\d+)')
+
+    max_iter = 0
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Check for convergence
+                conv_match = convergence_pattern.search(line)
+                if conv_match:
+                    return int(conv_match.group(1))
+                # Track the highest iteration seen
+                iter_match = iteration_pattern.search(line)
+                if iter_match:
+                    num = int(iter_match.group(1))
+                    if num > max_iter:
+                        max_iter = num
+    except FileNotFoundError:
+        # Notify caller that the file was not found
+        raise
+
+    # If convergence wasn't found, report status
+    if max_iter > 0:
+        return f"Not converged. Last completed iteration = {max_iter}."
+    else:
+        return "Not converged."
 
 
 def get_calculation_parameters(castep_path):
@@ -3090,6 +3136,135 @@ mpirun -np {n_ranks} castep.mpi {filename}
 
     return job_file
 
+
+from pathlib import Path
+
+def write_job_script_alternate(
+    path,
+    filename,
+    wall_time='24:00:00',
+    queue_name='A_192T_1024G.q',
+    available_cores=192,
+    available_memory='1024G',
+    threads=1,
+    safety_factor=0.95,
+    omp_places='cores',
+    omp_proc_bind='spread',
+    mpi_bind_to='core',
+    mpi_map_by=None,
+    display_file=False
+):
+    """
+    Write a job submission script for SGE with hybrid MPI+OpenMP threading,
+    allocating memory conservatively and setting CPU/thread affinity.
+
+    Args:
+        path (str or Path): Directory where the .job file will be created.
+        filename (str): Base name for the job file (no extension).
+        wall_time (str): Wallclock time in format HH:MM:SS.
+        queue_name (str): Name of the SGE queue.
+        available_cores (int): Total hardware threads available in the queue.
+        available_memory (str or int): Total memory (e.g., '1024G', '1048576M', or int GB).
+        threads (int): OMP threads per MPI rank (must divide available_cores).
+        safety_factor (float): Fraction of total memory to allocate (0 < factor <= 1).
+        omp_places (str): OMP_PLACES setting, e.g. 'cores'.
+        omp_proc_bind (str): OMP_PROC_BIND setting, e.g. 'spread' or 'close'.
+        mpi_bind_to (str): Open MPI --bind-to option, e.g. 'core', 'hwthread'.
+        mpi_map_by (str): Open MPI --map-by option; defaults to f"socket:PE={threads}".
+        display_file (bool): If True, print the script after writing.
+
+    Returns:
+        Path: Path to the written .job file.
+    """
+    # Validate threads and safety
+    if available_cores % threads != 0:
+        raise ValueError(f"threads ({threads}) must divide available_cores ({available_cores}) evenly.")
+    if not (0 < safety_factor <= 1):
+        raise ValueError("safety_factor must be between 0 (exclusive) and 1 (inclusive).")
+
+    # Calculate MPI ranks
+    n_ranks = available_cores // threads
+
+    # Parse available_memory into megabytes
+    if isinstance(available_memory, int):
+        total_mem_mb = available_memory * 1024
+    else:
+        mem_str = str(available_memory).strip().upper()
+        if mem_str.endswith('G'):
+            total_mem_mb = int(mem_str[:-1]) * 1024
+        elif mem_str.endswith('M'):
+            total_mem_mb = int(mem_str[:-1])
+        else:
+            raise ValueError("available_memory must be an integer or end with 'G' or 'M'.")
+
+    # Compute per-slot memory with safety margin
+    effective_mem_mb = int(total_mem_mb * safety_factor)
+    mem_per_slot_mb = effective_mem_mb // available_cores
+    mem_per_slot = f"{mem_per_slot_mb}M"
+
+    # Determine MPI mapping directive
+    map_by = mpi_map_by or f"socket:PE={threads}"
+
+    # Ensure output directory exists
+    out_dir = Path(path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build job file path
+    job_file = out_dir / f"{filename}.job"
+
+    # Generate script content
+    script_lines = [
+        "#!/bin/bash",
+        f"#$ -N {filename}                         # Job name",
+        f"#$ -q {queue_name}                    # Queue name",
+        f"#$ -l h_rt={wall_time}                     # Wall-clock time limit",
+        f"#$ -pe ompi-local {available_cores}                   # Request {available_cores} CPU slots",
+        f"#$ -l vf={mem_per_slot}                          # Memory per slot (~{mem_per_slot}/core)",
+        "#$ -V                                   # Export environment variables",
+        "#$ -cwd                                 # Run in current working directory",
+        "#$ -j y                                 # Join stdout and stderr",
+        f"#$ -o {filename}.apollo.log              # Combined log file",
+        "#$ -S /bin/bash                         # Use bash shell",
+        "",
+        "# OpenMP settings",
+        f"export OMP_NUM_THREADS={threads}",
+        f"export OMP_PLACES={omp_places}",
+        f"export OMP_PROC_BIND={omp_proc_bind}",
+        f"echo \"OpenMP:   OMP_NUM_THREADS=$OMP_NUM_THREADS\"",
+        f"echo \"Affinity: OMP_PLACES=$OMP_PLACES, OMP_PROC_BIND=$OMP_PROC_BIND\"",
+        "",
+        "# Compute ranks and diagnostics",
+        f"echo \"Total slots: $NSLOTS, MPI ranks: {n_ranks}, threads per rank: {threads}\"",
+        "",
+        "# Module setup",
+        "module use /hpc/srs/local/privatemodules/",
+        "module purge",
+        "module load CASTEP-24",
+        "module load modules sge",
+        "",
+        "# Activate conda environment",
+        "source /hpc/srs/local/miniconda3/etc/profile.d/conda.sh",
+        "conda activate apollo_castep",
+        "",
+        "# Diagnostics",
+        f"echo \"Host: $(hostname), Work dir: $(pwd), Python: $(which python), Mem/slot: $VF\"",
+        "",
+        "# Run CASTEP",
+        f"MPI_CMD=\"mpirun -np {n_ranks} --bind-to {mpi_bind_to} --map-by {map_by} castep.mpi {filename}\"",
+        f"echo \"Running: $MPI_CMD\"",
+        "$MPI_CMD"
+    ]
+
+    content = "\n".join(script_lines) + "\n"
+
+    # Write to disk
+    with open(job_file, 'w') as f:
+        f.write(content)
+
+    if display_file:
+        print(content)
+
+    return job_file
 
 #endregion Generate cluster job submission scripts
 # ============================================================================
